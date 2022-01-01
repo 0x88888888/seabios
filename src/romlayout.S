@@ -63,6 +63,7 @@ transition32_nmi_off:
         movw %cx, %fs
         movw %cx, %gs
 
+        // handle_post ,[ src/post.c ]
         jmpl *%edx
         .code16
 

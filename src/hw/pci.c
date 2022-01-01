@@ -23,7 +23,10 @@ static void *mmconfig_addr(u16 bdf, u32 addr)
 
 static u32 ioconfig_cmd(u16 bdf, u32 addr)
 {
-    return 0x80000000 | (bdf << 8) | (addr & 0xfc);
+    /*
+     * 0xfc=11111100 只取addr的3-8位 
+     */
+    return 0x80000000 | (bdf << 8) | (addr & 0xfc);  
 }
 
 void pci_config_writel(u16 bdf, u32 addr, u32 val)
@@ -58,19 +61,25 @@ void pci_config_writeb(u16 bdf, u32 addr, u8 val)
 
 u32 pci_config_readl(u16 bdf, u32 addr)
 {
+    //olly_printf("%s","0 --------------####--------------pci_config_readl ----------###---------- \n");
     if (!MODESEGMENT && mmconfig) {
         return readl(mmconfig_addr(bdf, addr));
     } else {
+        olly_printf("pci_config_readl : out ioconfig_cmd(bdf, addr)=0x%x port=0x%x \n", ioconfig_cmd(bdf, addr), PORT_PCI_CMD);
         outl(ioconfig_cmd(bdf, addr), PORT_PCI_CMD);
+        olly_printf("pci_config_readl : in port=0x%x \n", PORT_PCI_DATA);
         return inl(PORT_PCI_DATA);
     }
 }
 
 u16 pci_config_readw(u16 bdf, u32 addr)
 {
+    //olly_printf("%s","0 --####--pci_config_readw --###-- \n");
     if (!MODESEGMENT && mmconfig) {
+        //olly_printf("%s","1 --####--pci_config_readw --###-- \n");
         return readw(mmconfig_addr(bdf, addr));
     } else {
+        //olly_printf("2 --####--pci_config_readw --###-- ioconfig_cmd :0x%x \n", ioconfig_cmd(bdf, addr));
         outl(ioconfig_cmd(bdf, addr), PORT_PCI_CMD);
         return inw(PORT_PCI_DATA + (addr & 2));
     }
@@ -78,10 +87,13 @@ u16 pci_config_readw(u16 bdf, u32 addr)
 
 u8 pci_config_readb(u16 bdf, u32 addr)
 {
+    //olly_printf("0 --####--pci_config_readb --###-- ioconfig_cmd(bdf, addr)=0x%x \n", ioconfig_cmd(bdf, addr));
     if (!MODESEGMENT && mmconfig) {
         return readb(mmconfig_addr(bdf, addr));
     } else {
+        olly_printf("0 --pci_config_readb --###-- out: ioconfig_cmd(bdf, addr)=0x%x \n", ioconfig_cmd(bdf, addr));
         outl(ioconfig_cmd(bdf, addr), PORT_PCI_CMD);
+        olly_printf("1 --####--pci_config_readb --###-- in: PORT_PCI_DATA+(addr & 3)=0x%x \n", PORT_PCI_DATA+(addr & 3));
         return inb(PORT_PCI_DATA + (addr & 3));
     }
 }
@@ -131,6 +143,7 @@ u8 pci_find_capability(u16 bdf, u8 cap_id, u8 cap)
 int
 pci_next(int bdf, int bus)
 {
+    //olly_printf("%s","0 --####--pci_next --###-- \n");
     if (pci_bdf_to_fn(bdf) == 0
         && (pci_config_readb(bdf, PCI_HEADER_TYPE) & 0x80) == 0)
         // Last found device wasn't a multi-function device - skip to
@@ -139,10 +152,12 @@ pci_next(int bdf, int bus)
     else
         bdf += 1;
 
+    
     for (;;) {
         if (pci_bdf_to_bus(bdf) != bus)
             return -1;
 
+        olly_printf("1 --####--pci_next --###-- bdf=0x%x bus=0x%x \n", bdf, bus);
         u16 v = pci_config_readw(bdf, PCI_VENDOR_ID);
         if (v != 0x0000 && v != 0xffff)
             // Device is present.

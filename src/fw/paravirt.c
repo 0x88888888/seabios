@@ -154,6 +154,11 @@ static void qemu_detect(void)
 
 static int qemu_early_e820(void);
 
+/*
+ * handle_post()
+ *  dopost()
+ *   qemu_preinit()
+ */
 void
 qemu_preinit(void)
 {

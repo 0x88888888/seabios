@@ -286,6 +286,11 @@ reloc_preinit(void *f, void *arg)
     func(arg);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   code_mutable_preinit()
+ */
 // Runs after all code is present and prior to any modifications
 void
 code_mutable_preinit(void)
@@ -300,14 +305,20 @@ code_mutable_preinit(void)
     barrier();
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ */
 // Setup for code relocation and then relocate.
 void VISIBLE32INIT
 dopost(void)
 {
+    olly_printf("0----------------in dopost----------------------------\n");
     code_mutable_preinit();
-
+    olly_printf("1----------------in dopost----------------------------\n");
     // Detect ram and setup internal malloc.
     qemu_preinit();
+    olly_printf("2----------------in dopost----------------------------\n");
     coreboot_preinit();
     malloc_preinit();
 
@@ -321,19 +332,21 @@ dopost(void)
 void VISIBLE32FLAT
 handle_post(void)
 {
-    olly_printf("%s","--------------####--------------handle_post ----------###---------- \n");
+    olly_printf("%s","0 --------------####--------------handle_post ----------###---------- \n");
     if (!CONFIG_QEMU && !CONFIG_COREBOOT)
         return;
 
-    serial_debug_preinit();
-    debug_banner();
-
+    serial_debug_preinit(); //直接返回了
+    olly_printf("%s","1 --------------####--------------handle_post ----------###---------- \n");
+    debug_banner(); //只有打印SeaBios版本信息
+    olly_printf("%s","2 --------------####--------------handle_post ----------###---------- \n");
     // Check if we are running under Xen.
-    xen_preinit();
-
+    xen_preinit(); //检查是否运行在xen vm
+    olly_printf("%s","3 --------------####--------------handle_post ----------###---------- \n");
     // Allow writes to modify bios area (0xf0000)
+    
     make_bios_writable();
-
+    olly_printf("%s","x --------------####--------------handle_post ----------###---------- \n");
     // Now that memory is read/writable - start post process.
     dopost();
 }

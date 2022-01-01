@@ -52,6 +52,10 @@ static void validate_info(struct xen_seabios_info *t)
         panic("Bad Xen info checksum\n");
 }
 
+/*
+ * handle_post()
+ *  xen_preinit()
+ */
 void xen_preinit(void)
 {
     u32 base, eax, ebx, ecx, edx;
@@ -60,6 +64,7 @@ void xen_preinit(void)
     if (!CONFIG_XEN)
         return;
 
+    //遍历所有的cpuid
     for (base = 0x40000000; base < 0x40010000; base += 0x100) {
         cpuid(base, &eax, &ebx, &ecx, &edx);
         memcpy(signature + 0, &ebx, 4);

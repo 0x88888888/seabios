@@ -30,10 +30,13 @@ union pamdata_u {
 static void
 __make_bios_writable_intel(u16 bdf, u32 pam0)
 {
+    olly_printf("0--------------__make_bios_writable_intel\n");
     // Read in current PAM settings from pci config space
     union pamdata_u pamdata;
     pamdata.data32[0] = pci_config_readl(bdf, ALIGN_DOWN(pam0, 4));
+    olly_printf("1--------------__make_bios_writable_intel\n");
     pamdata.data32[1] = pci_config_readl(bdf, ALIGN_DOWN(pam0, 4) + 4);
+    olly_printf("2--------------__make_bios_writable_intel\n");
     u8 *pam = &pamdata.data8[pam0 & 0x03];
 
     // Make ram from 0xc0000-0xf0000 writable
@@ -45,10 +48,13 @@ __make_bios_writable_intel(u16 bdf, u32 pam0)
     int ram_present = pam[0] & 0x10;
     pam[0] = 0x30;
 
+    olly_printf("3--------------__make_bios_writable_intel\n");
     // Write PAM settings back to pci config space
     pci_config_writel(bdf, ALIGN_DOWN(pam0, 4), pamdata.data32[0]);
+    olly_printf("4--------------__make_bios_writable_intel\n");
     pci_config_writel(bdf, ALIGN_DOWN(pam0, 4) + 4, pamdata.data32[1]);
 
+    olly_printf("5--------------__make_bios_writable_intel\n");
     if (!ram_present)
         // Copy bios.
         memcpy(VSYMBOL(code32flat_start)
@@ -56,22 +62,32 @@ __make_bios_writable_intel(u16 bdf, u32 pam0)
                , SYMBOL(code32flat_end) - SYMBOL(code32flat_start));
 }
 
+/*
+ * handle_post()
+ *  make_bios_writable()
+ *   make_bios_writable_intel( pam0==Q35_HOST_BRIDGE_PAM0==0x90)
+ */
 static void
 make_bios_writable_intel(u16 bdf, u32 pam0)
 {
     int reg = pci_config_readb(bdf, pam0);
+    olly_printf("1-------------------make_bios_writable_intel reg=0x%x\n", reg);
     if (!(reg & 0x10)) {
         // QEMU doesn't fully implement the piix shadow capabilities -
         // if ram isn't backing the bios segment when shadowing is
         // disabled, the code itself won't be in memory.  So, run the
         // code from the high-memory flash location.
         u32 pos = (u32)__make_bios_writable_intel + BIOS_SRC_OFFSET;
+
         void (*func)(u16 bdf, u32 pam0) = (void*)pos;
         func(bdf, pam0);
+        olly_printf("5-------------------make_bios_writable_intel reg=0x%x\n", reg);
         return;
     }
     // Ram already present - just enable writes
+    olly_printf("2-------------------make_bios_writable_intel reg=0x%x\n", reg);
     __make_bios_writable_intel(bdf, pam0);
+    olly_printf("3-------------------make_bios_writable_intel reg=0x%x\n", reg);
 }
 
 static void
@@ -113,21 +129,35 @@ make_bios_readonly_intel(u16 bdf, u32 pam0)
 
 static int ShadowBDF = -1;
 
+/*
+ * handle_post()
+ *  make_bios_writable()
+ */
 // Make the 0xc0000-0x100000 area read/writable.
 void
 make_bios_writable(void)
 {
+    olly_printf("%s","0 --####make_bios_writable -###- \n");
     if (!CONFIG_QEMU || runningOnXen())
         return;
 
-    dprintf(3, "enabling shadow ram\n");
+    olly_printf("%s","1 --####--make_bios_writable -###- \n");
 
+
+    dprintf(3, "enabling shadow ram\n");
+    olly_printf("%s","2 --####--make_bios_writable -###- \n");
     // At this point, statically allocated variables can't be written,
     // so do this search manually.
     int bdf;
+    //遍历0号bus上所有的bdf,得到I440FX_PAM0或者q35机型就退出
     foreachbdf(bdf, 0) {
+        olly_printf("%s","3 -####-make_bios_writable -###- \n");
+        //得到vendor id
         u32 vendev = pci_config_readl(bdf, PCI_VENDOR_ID);
+        olly_printf("4 -####-make_bios_writable -###-  vendev=0x%x\n", vendev);
         u16 vendor = vendev & 0xffff, device = vendev >> 16;
+        
+        //下面是两种不同的机型
         if (vendor == PCI_VENDOR_ID_INTEL
             && device == PCI_DEVICE_ID_INTEL_82441) {
             make_bios_writable_intel(bdf, I440FX_PAM0);
@@ -135,14 +165,20 @@ make_bios_writable(void)
             ShadowBDF = bdf;
             return;
         }
+        //Q35机型
         if (vendor == PCI_VENDOR_ID_INTEL
             && device == PCI_DEVICE_ID_INTEL_Q35_MCH) {
+
+            //pam == program
             make_bios_writable_intel(bdf, Q35_HOST_BRIDGE_PAM0);
+            olly_printf("-----------------------------\n");
             code_mutable_preinit();
+            olly_printf("-----------------------------\n");
             ShadowBDF = bdf;
             return;
         }
     }
+    olly_printf("%s","5 --####--make_bios_writable --###-- \n");
     dprintf(1, "Unable to unlock ram - bridge not found\n");
 }
 

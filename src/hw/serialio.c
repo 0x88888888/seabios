@@ -41,12 +41,17 @@ serial_debug_read(u8 offset)
     }
 }
 
+/*
+ * handle_post()
+ *  serial_debug_preinit()
+ */ 
 // Setup the debug serial port for output.
 void
 serial_debug_preinit(void)
 {
     if (!CONFIG_DEBUG_SERIAL && (!CONFIG_DEBUG_SERIAL_MMIO || MODESEGMENT))
-        return;
+        return; //默认直接返回了
+
     // setup for serial logging: 8N1
     u8 oldparam, newparam = 0x03;
     oldparam = serial_debug_read(SEROFF_LCR);
