@@ -118,22 +118,34 @@ static void kvmclock_init(void)
     tsctimer_setfreq(MHz * 1000, "kvmclock");
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   qemu_preinit()
+ *    qemu_detect()
+ */
 static void qemu_detect(void)
 {
     if (!CONFIG_QEMU_HARDWARE)
         return;
 
     // Setup QEMU debug output port
+    olly_printf("0----------qemu_detect\n");
     qemu_debug_preinit();
+    olly_printf("1----------qemu_detect\n");
 
     // check northbridge @ 00:00.0
     u16 v = pci_config_readw(0, PCI_VENDOR_ID);
+    olly_printf("2----------qemu_detect v=0x%x\n",v);
     if (v == 0x0000 || v == 0xffff)
         return;
     u16 d = pci_config_readw(0, PCI_DEVICE_ID);
+    olly_printf("3----------qemu_detect d=0x%x  \n", d);
     u16 sv = pci_config_readw(0, PCI_SUBSYSTEM_VENDOR_ID);
+    olly_printf("4----------qemu_detect sv=0x%x  \n", sv);
     u16 sd = pci_config_readw(0, PCI_SUBSYSTEM_ID);
 
+    olly_printf("5----------qemu_detect v=0x%x d=0x%x sv=0x%x sd=0x%x \n",v, d, sv , sd);
     if (sv != 0x1af4 || /* Red Hat, Inc */
         sd != 0x1100)   /* Qemu virtual machine */
         return;
@@ -162,8 +174,11 @@ static int qemu_early_e820(void);
 void
 qemu_preinit(void)
 {
+    olly_printf("0........qemu_preinit\n");
     qemu_detect();
+    olly_printf("1........qemu_preinit\n");
     kvm_detect();
+    olly_printf("2........qemu_preinit\n");
 
     if (!CONFIG_QEMU)
         return;
@@ -173,8 +188,10 @@ qemu_preinit(void)
         return;
     }
 
+    olly_printf("3........qemu_preinit\n");
     // try read e820 table first
     if (!qemu_early_e820()) {
+        olly_printf("4........qemu_preinit\n");
         // when it fails get memory size from nvram.
         u32 rs = ((rtc_read(CMOS_MEM_EXTMEM2_LOW) << 16)
                   | (rtc_read(CMOS_MEM_EXTMEM2_HIGH) << 24));
@@ -189,6 +206,7 @@ qemu_preinit(void)
         dprintf(1, "RamSize: 0x%08x [cmos]\n", RamSize);
     }
 
+     olly_printf("8........qemu_preinit\n");
     /* reserve 256KB BIOS area at the end of 4 GB */
     e820_add(0xfffc0000, 256*1024, E820_RESERVED);
 }
@@ -597,13 +615,22 @@ struct QemuCfgFile {
     char name[56];
 };
 
+/*
+ * handle_post()
+ *  dopost()
+ *   qemu_preinit()
+ *    qemu_early_e820()
+ *     qemu_cfg_detect()
+ */ 
 static int qemu_cfg_detect(void)
 {
     if (cfg_enabled)
         return 1;
 
     // Detect fw_cfg interface.
+    olly_printf("0----------qemu_cfg_detect\n");
     qemu_cfg_select(QEMU_CFG_SIGNATURE);
+    olly_printf("1----------qemu_cfg_detect\n");
     char *sig = "QEMU";
     int i;
     for (i = 0; i < 4; i++)
@@ -663,6 +690,11 @@ void qemu_cfg_init(void)
 }
 
 /*
+ * handle_post()
+ *  dopost()
+ *   qemu_preinit()
+ *    qemu_early_e820()
+ *
  * This runs before malloc and romfile are ready, so we have to work
  * with stack allocations and read from fw_cfg in chunks.
  */
