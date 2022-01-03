@@ -34,7 +34,9 @@ void pci_config_writel(u16 bdf, u32 addr, u32 val)
     if (!MODESEGMENT && mmconfig) {
         writel(mmconfig_addr(bdf, addr), val);
     } else {
+        olly_printf("pci_config_writel port=0xcf8 bdf=0x%x ,addr=0x%x , ioconfig_cmd(bdf, addr)=0x%x\n", bdf, addr, ioconfig_cmd(bdf, addr));
         outl(ioconfig_cmd(bdf, addr), PORT_PCI_CMD);
+        olly_printf("pci_config_writel port=0xcfc val=0x%x \n", val);
         outl(val, PORT_PCI_DATA);
     }
 }
@@ -44,7 +46,9 @@ void pci_config_writew(u16 bdf, u32 addr, u16 val)
     if (!MODESEGMENT && mmconfig) {
         writew(mmconfig_addr(bdf, addr), val);
     } else {
+        //0xcf8端口记录下bdf
         outl(ioconfig_cmd(bdf, addr), PORT_PCI_CMD);
+        //写value到 0xcfc端口
         outw(val, PORT_PCI_DATA + (addr & 2));
     }
 }
@@ -148,7 +152,7 @@ pci_next(int bdf, int bus)
         && (pci_config_readb(bdf, PCI_HEADER_TYPE) & 0x80) == 0)
         // Last found device wasn't a multi-function device - skip to
         // the next device.
-        bdf += 8;
+        bdf += 8; 
     else
         bdf += 1;
 
@@ -170,6 +174,16 @@ pci_next(int bdf, int bus)
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_probe_host()
+ */
 // Check if PCI is available at all
 int
 pci_probe_host(void)

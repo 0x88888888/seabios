@@ -220,6 +220,14 @@ static void msr_feature_control_setup(void)
         wrmsr_smp(MSR_IA32_FEATURE_CONTROL, feature_control_bits);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ */ 
 void
 qemu_platform_setup(void)
 {
@@ -236,7 +244,9 @@ qemu_platform_setup(void)
     kvmclock_init();
 
     // Initialize pci
+    olly_printf("0-------qemu_platform_setup\n");
     pci_setup();
+    olly_printf("1-------qemu_platform_setup\n");
     smm_device_setup();
     smm_setup();
 

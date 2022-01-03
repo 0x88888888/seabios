@@ -53,6 +53,14 @@ dma_floppy(u32 addr, int count, int isWrite)
     return 0;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      dma_setup()
+ */ 
 // Reset DMA controller
 void
 dma_setup(void)

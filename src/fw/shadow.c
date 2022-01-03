@@ -48,7 +48,7 @@ __make_bios_writable_intel(u16 bdf, u32 pam0)
     int ram_present = pam[0] & 0x10;
     pam[0] = 0x30;
 
-    olly_printf("3--------------__make_bios_writable_intel\n");
+    olly_printf("3--------------__make_bios_writable_intel bdf=0x%x\n", bdf);
     // Write PAM settings back to pci config space
     pci_config_writel(bdf, ALIGN_DOWN(pam0, 4), pamdata.data32[0]);
     olly_printf("4--------------__make_bios_writable_intel\n");

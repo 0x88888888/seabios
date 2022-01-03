@@ -98,14 +98,25 @@ bda_init(void)
     StackPos = &ExtraStack[BUILD_EXTRA_STACK_SIZE] - SYMBOL(zonelow_base);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     interface_init()
+ */ 
 void
 interface_init(void)
 {
     // Running at new code address - do code relocation fixups
+    olly_printf("0.........interface_init \n");
     malloc_init();
+    olly_printf("1.........interface_init \n");
 
     // Setup romfile items.
     qemu_cfg_init();
+    olly_printf("2.........interface_init \n");
+
     coreboot_cbfs_init();
     multiboot_init();
 
@@ -134,27 +145,43 @@ device_hardware_setup(void)
     cbfs_payload_setup();
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ */ 
 static void
 platform_hardware_setup(void)
 {
     // Make sure legacy DMA isn't running.
+    olly_printf("0------platform_hardware_setup\n");
     dma_setup();
+    olly_printf("1------platform_hardware_setup\n");
 
     // Init base pc hardware.
     pic_setup();
+    olly_printf("2------platform_hardware_setup\n");
     thread_setup();
+    olly_printf("3------platform_hardware_setup\n");
     mathcp_setup();
-
+    olly_printf("4------platform_hardware_setup\n");
     // Platform specific setup
     qemu_platform_setup();
+    olly_printf("5------platform_hardware_setup\n");
     coreboot_platform_setup();
+    olly_printf("6------platform_hardware_setup\n");
 
     // Setup timers and periodic clock interrupt
     timer_setup();
+    olly_printf("7------platform_hardware_setup\n");
     clock_setup();
+    olly_printf("8------platform_hardware_setup\n");
 
     // Initialize TPM
     tpm_setup();
+    olly_printf("9------platform_hardware_setup\n");
 }
 
 void
@@ -192,16 +219,24 @@ startBoot(void)
     call16_int(0x19, &br);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ */ 
 // Main setup code.
 static void
 maininit(void)
 {
-    dprintf(3,"--------------------&**()--------------$^$@$-----------------------------------\n");
+    olly_printf("%s\n","0----------maininit \n");
     // Initialize internal interfaces.
     interface_init();
+    olly_printf("%s\n","1----------maininit \n");
 
     // Setup platform devices.
     platform_hardware_setup();
+    olly_printf("%s\n","2----------maininit \n");
 
     // Start hardware initialization (if threads allowed during optionroms)
     if (threads_during_optionroms())
@@ -249,9 +284,15 @@ updateRelocs(void *dest, u32 *rstart, u32 *rend, u32 delta)
         *((u32*)(dest + *reloc)) += delta;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *  
 // Relocate init code and then call a function at its new address.
 // The passed function should be in the "init" section and must not
 // return.
+*/
 void __noreturn
 reloc_preinit(void *f, void *arg)
 {
@@ -271,6 +312,7 @@ reloc_preinit(void *f, void *arg)
     dprintf(1, "Relocating init from %p to %p (size %d)\n"
             , codesrc, codedest, initsize);
     s32 delta = codedest - codesrc;
+    //olly_printf("0----------reloc_preinit  delta = 0x%x\n", delta);
     memcpy(codedest, codesrc, initsize);
     updateRelocs(codedest, VSYMBOL(_reloc_abs_start), VSYMBOL(_reloc_abs_end)
                  , delta);
@@ -278,12 +320,14 @@ reloc_preinit(void *f, void *arg)
                  , -delta);
     updateRelocs(VSYMBOL(code32flat_start), VSYMBOL(_reloc_init_start)
                  , VSYMBOL(_reloc_init_end), delta);
+
+    //函数位置重新定位了
     if (f >= codesrc && f < VSYMBOL(code32init_end))
         func = f + delta;
-
+    //olly_printf("1----------reloc_preinit f=0x%x func=0x%x\n",f, func);
     // Call function in relocated code.
     barrier();
-    func(arg);
+    func(arg);  //  
 }
 
 /*
@@ -320,10 +364,12 @@ dopost(void)
     qemu_preinit();
     olly_printf("2----------------in dopost----------------------------\n");
     coreboot_preinit();
+    olly_printf("3----------------in dopost----------------------------\n");
     malloc_preinit();
-
+    olly_printf("4----------------in dopost----------------------------\n");
     // Relocate initialization code and call maininit().
     reloc_preinit(maininit, NULL);
+    olly_printf("5----------------in dopost----------------------------\n");
 }
 
 // Entry point for Power On Self Test (POST) - the BIOS initilization

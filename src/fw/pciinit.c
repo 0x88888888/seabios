@@ -1143,7 +1143,15 @@ static void pci_bios_map_devices(struct pci_bus *busses)
 /****************************************************************
  * Main setup code
  ****************************************************************/
-
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ */ 
 void
 pci_setup(void)
 {
