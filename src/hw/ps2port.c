@@ -54,17 +54,30 @@ i8042_wait_write(void)
     return -1;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      ps2port_setup()
+ *       ps2_keyboard_setup()
+ *        i8042_flush()
+ */ 
 static int
 i8042_flush(void)
 {
     dprintf(7, "i8042_flush\n");
     int i;
     for (i=0; i<I8042_BUFFER_SIZE; i++) {
-        u8 status = inb(PORT_PS2_STATUS);
-        if (! (status & I8042_STR_OBF))
+        olly_printf("0-----------i8042_flush\n");
+        u8 status = inb(PORT_PS2_STATUS); //0x0064
+        if (! (status & I8042_STR_OBF)) //可以直接返回了
             return 0;
+
         udelay(50);
-        u8 data = inb(PORT_PS2_DATA);
+        olly_printf("1-----------i8042_flush\n");
+        u8 data = inb(PORT_PS2_DATA); //0x0060
         dprintf(7, "i8042 flushed %x (status=%x)\n", data, status);
     }
 
@@ -105,6 +118,16 @@ __i8042_command(int command, u8 *param)
     return 0;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      ps2port_setup()
+ *       ps2_keyboard_setup()
+ *        i8042_command()
+ */ 
 static int
 i8042_command(int command, u8 *param)
 {
@@ -445,12 +468,22 @@ ps2_check_event(void)
 /****************************************************************
  * Setup
  ****************************************************************/
-
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      ps2port_setup()
+ *       ps2_keyboard_setup()
+ */ 
 static void
 ps2_keyboard_setup(void *data)
 {
     // flush incoming keys (also verifies port is likely present)
+    olly_printf("0--------ps2_keyboard_setup\n");
     int ret = i8042_flush();
+    olly_printf("1--------ps2_keyboard_setup\n");
     if (ret)
         return;
 
@@ -465,6 +498,7 @@ ps2_keyboard_setup(void *data)
     if (ret)
         return;
 
+    olly_printf("2--------ps2_keyboard_setup\n");
     // Controller self-test.
     u8 param[2];
     ret = i8042_command(I8042_CMD_CTL_TEST, param);
@@ -479,6 +513,7 @@ ps2_keyboard_setup(void *data)
     ret = i8042_command(I8042_CMD_KBD_TEST, param);
     if (ret)
         return;
+        
     if (param[0] != 0x00) {
         dprintf(1, "i8042 keyboard test failed (got %x not 0x00)\n", param[0]);
         return;
@@ -528,20 +563,32 @@ ps2_keyboard_setup(void *data)
     dprintf(1, "PS2 keyboard initialized\n");
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      ps2port_setup()
+ */ 
 void
 ps2port_setup(void)
 {
     ASSERT32FLAT();
     if (! CONFIG_PS2PORT)
         return;
+    olly_printf("0------------ps2port_setup\n");
     if (acpi_dsdt_present_eisaid(0x0303) == 0) {
         dprintf(1, "ACPI: no PS/2 keyboard present\n");
         return;
     }
+    olly_printf("1------------ps2port_setup\n");
     dprintf(3, "init ps2port\n");
 
     enable_hwirq(1, FUNC16(entry_09));
+    olly_printf("2------------ps2port_setup\n");
     enable_hwirq(12, FUNC16(entry_74));
-
+    olly_printf("3------------ps2port_setup\n");
     run_thread(ps2_keyboard_setup, NULL);
+    olly_printf("4------------ps2port_setup\n");
 }

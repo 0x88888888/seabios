@@ -270,11 +270,23 @@ ticks_from_ms(u32 ms)
     return DIV_ROUND_UP(t, 1000 * PMTIMER_TO_PIT);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      clock_setup()
+ *       pit_setup()
+ */ 
 void
 pit_setup(void)
 {
+    olly_printf("0------------pit_setup\n");
     if (!CONFIG_HARDWARE_IRQ)
         return;
+    olly_printf("1------------pit_setup\n");
+    //下面几个io端口应该时kvm直接处理了
     // timer0: binary count, 16bit count, mode 2
     outb(PM_SEL_TIMER0|PM_ACCESS_WORD|PM_MODE2|PM_CNT_BINARY, PORT_PIT_MODE);
     // maximum count of 0000H = 18.2Hz

@@ -133,16 +133,30 @@ interface_init(void)
     mouse_init();
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ */ 
 // Initialize hardware devices
 void
 device_hardware_setup(void)
 {
+    olly_printf("0------device_hardware_setup\n");
     usb_setup();
+    olly_printf("1------device_hardware_setup\n");
     ps2port_setup();
+    olly_printf("2------device_hardware_setup\n");
     block_setup();
+    olly_printf("3------device_hardware_setup\n");
     lpt_setup();
+    olly_printf("4------device_hardware_setup\n");
     serial_setup();
+    olly_printf("5------device_hardware_setup\n");
     cbfs_payload_setup();
+    olly_printf("6------device_hardware_setup\n");
 }
 
 /*
@@ -242,23 +256,34 @@ maininit(void)
     if (threads_during_optionroms())
         device_hardware_setup();
 
+    olly_printf("%s\n","3----------maininit \n");
     // Run vga option rom
     vgarom_setup();
+    olly_printf("%s\n","4----------maininit \n");
     sercon_setup();
+    olly_printf("%s\n","5----------maininit \n");
     enable_vga_console();
+    olly_printf("%s\n","6----------maininit \n");
 
     // Do hardware initialization (if running synchronously)
     if (!threads_during_optionroms()) {
+        olly_printf("%s\n","66----------maininit \n");
         device_hardware_setup();
+        olly_printf("%s\n","67----------maininit \n");
         wait_threads();
+        olly_printf("%s\n","68----------maininit \n");
     }
 
+    olly_printf("7----------maininit \n");
     // Run option roms
     optionrom_setup();
+    olly_printf("8----------maininit \n");
 
     // Allow user to modify overall boot order.
     interactive_bootmenu();
+    olly_printf("9----------maininit \n");
     wait_threads();
+    olly_printf("10----------maininit \n");
 
     // Prepare for boot.
     prepareboot();

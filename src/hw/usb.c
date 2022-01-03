@@ -495,6 +495,14 @@ usb_enumerate(struct usbhub_s *hub)
         yield();
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      usb_setup()
+ */ 
 void
 usb_setup(void)
 {

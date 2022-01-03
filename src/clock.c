@@ -29,26 +29,45 @@ bcd2bin(u8 val)
 
 u8 Century VARLOW;
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      clock_setup()
+ */ 
 void
 clock_setup(void)
 {
     dprintf(3, "init timer\n");
+    olly_printf("0------------clock_setup\n");
     pit_setup();
+    olly_printf("1------------clock_setup\n");
 
     rtc_setup();
+    olly_printf("2------------clock_setup\n");
     rtc_updating();
+    olly_printf("3------------clock_setup\n");
     u32 seconds = bcd2bin(rtc_read(CMOS_RTC_SECONDS));
+    olly_printf("4------------clock_setup\n");
     u32 minutes = bcd2bin(rtc_read(CMOS_RTC_MINUTES));
+    olly_printf("5------------clock_setup\n");
     u32 hours = bcd2bin(rtc_read(CMOS_RTC_HOURS));
+    olly_printf("6------------clock_setup\n");
     u32 ticks = ticks_from_ms(((hours * 60 + minutes) * 60 + seconds) * 1000);
     SET_BDA(timer_counter, ticks % TICKS_PER_DAY);
-
+    olly_printf("7------------clock_setup\n");
     // Setup Century storage
     if (CONFIG_QEMU) {
+        olly_printf("t------------clock_setup\n");
         Century = rtc_read(CMOS_CENTURY);
+        olly_printf("8------------clock_setup\n");
     } else {
         // Infer current century from the year.
+        
         u8 year = rtc_read(CMOS_RTC_YEAR);
+        olly_printf("9------------clock_setup\n");
         if (year > 0x80)
             Century = 0x19;
         else

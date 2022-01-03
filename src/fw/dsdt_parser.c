@@ -620,13 +620,26 @@ int acpi_dsdt_find_irq(struct acpi_device *dev, u64 *irq)
                          3 /* irq */, irq, &max);
 }
 
+
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      ps2port_setup()
+ *       acpi_dsdt_present_eisaid(eisaid==0x0303)
+ */ 
 int acpi_dsdt_present_eisaid(u16 eisaid)
 {
+    olly_printf("0------------acpi_dsdt_present_eisaid\n");
     if (!CONFIG_ACPI_PARSE)
         return -1; /* unknown */
+    olly_printf("1------------acpi_dsdt_present_eisaid\n");
     if (hlist_empty(&acpi_devices))
         return -1; /* unknown (no dsdt table) */
 
+    olly_printf("2------------acpi_dsdt_present_eisaid\n");
     struct acpi_device *dev = acpi_dsdt_find_eisaid(NULL, eisaid);
     return acpi_dsdt_present(dev);
 }
