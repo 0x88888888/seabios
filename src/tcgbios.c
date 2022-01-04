@@ -1203,6 +1203,16 @@ tpm_startup(void)
     return -1;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      tpm_setup()
+ * 
+ * tpm ==  Trusted Platform Module
+ */ 
 void
 tpm_setup(void)
 {

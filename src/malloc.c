@@ -409,6 +409,12 @@ rom_confirm(u32 size)
  * Setup
  ****************************************************************/
 
+
+/*
+ * handle_post()
+ *  dopost()
+ *   malloc_preinit()
+ */
 void
 malloc_preinit(void)
 {
@@ -485,6 +491,14 @@ calcRamSize(void)
     LegacyRamSize = rs >= 1024*1024 ? rs : 1024*1024;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     interface_init()
+ *      malloc_init()
+ */ 
 // Update pointers after code relocation.
 void
 malloc_init(void)

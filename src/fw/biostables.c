@@ -84,8 +84,9 @@ static int
 get_acpi_rsdp_length(void *pos, unsigned size)
 {
     struct rsdp_descriptor *p = pos;
-    if (p->signature != RSDP_SIGNATURE)
+    if (p->signature != RSDP_SIGNATURE) //必须是这个开头，才是acpi的 rsdp
         return -1;
+
     u32 length = 20;
     if (length > size)
         return -1;
@@ -424,6 +425,17 @@ smbios_new_type_0(void *start,
 #define BIOS_NAME "SeaBIOS"
 #define BIOS_DATE "04/01/2014"
 
+
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       smbios_setup()
+ *        smbios_romfile_setup()
+ */ 
 static int
 smbios_romfile_setup(void)
 {
@@ -500,6 +512,15 @@ smbios_romfile_setup(void)
     return 1;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       smbios_setup()
+ */ 
 void
 smbios_setup(void)
 {

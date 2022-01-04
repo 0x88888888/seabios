@@ -231,6 +231,14 @@ struct bios32_s BIOS32HEADER __aligned(16) VARFSEG = {
     .length = sizeof(BIOS32HEADER) / 16,
 };
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     interface_init()
+ *      bios32_init()
+ */ 
 void
 bios32_init(void)
 {

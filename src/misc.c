@@ -58,6 +58,14 @@ handle_02(void)
     debug_isr(DEBUG_ISR_02);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      mathcp_setup()
+ */ 
 void
 mathcp_setup(void)
 {

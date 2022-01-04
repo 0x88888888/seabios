@@ -13,9 +13,20 @@
 #include "stacks.h" // wait_preempt
 #include "string.h" // memset
 
+//所有的pci设备，在pci_probe_devices中构建
 struct hlist_head PCIDevices VARVERIFY32INIT;
 int MaxPCIBus VARFSEG;
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_probe_devices()
+ */ 
 // Find all PCI devices and populate PCIDevices linked list.
 void
 pci_probe_devices(void)
@@ -23,13 +34,17 @@ pci_probe_devices(void)
     dprintf(3, "PCI probe\n");
     struct pci_device *busdevs[256];
     memset(busdevs, 0, sizeof(busdevs));
+    //所有的pci设备
     struct hlist_node **pprev = &PCIDevices.first;
     int extraroots = romfile_loadint("etc/extra-pci-roots", 0);
     int bus = -1, lastbus = 0, rootbuses = 0, count=0;
+    //所有的bus号
     while (bus < 0xff && (bus < MaxPCIBus || rootbuses < extraroots)) {
         bus++;
         int bdf;
-        foreachbdf(bdf, bus) {
+        //bus下的设备
+        foreachbdf(bdf, bus) { //qemu有这个设备，所以已经发现设备了
+
             // Create new pci_device struct and add to list.
             struct pci_device *dev = malloc_tmp(sizeof(*dev));
             if (!dev) {
@@ -107,14 +122,27 @@ pci_find_class(u16 classid)
     return NULL;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_bios_init_platform()
+ *         pci_init_device(ids==pci_platform_tbl)
+ */ 
 int pci_init_device(const struct pci_device_id *ids
                     , struct pci_device *pci, void *arg)
 {
     while (ids->vendid || ids->class_mask) {
+
         if ((ids->vendid == PCI_ANY_ID || ids->vendid == pci->vendor) &&
             (ids->devid == PCI_ANY_ID || ids->devid == pci->device) &&
             !((ids->class ^ pci->class) & ids->class_mask)) {
-            if (ids->func)
+
+            if (ids->func) // Q35:mch_mem_addr_setup,  [ src/fw/pciinit.c ]
                 ids->func(pci, arg);
             return 0;
         }

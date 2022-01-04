@@ -29,6 +29,16 @@
  * BIOS initialization and hardware setup
  ****************************************************************/
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     interface_init()
+ *      ivt_init()
+ * 
+ * 建立ivt
+ */ 
 static void
 ivt_init(void)
 {
@@ -70,6 +80,16 @@ ivt_init(void)
     SET_IVT(0x79, SEGOFF(0, 0));
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     interface_init()
+ *      bda_init()
+ * 
+ * 建立 bios data area, extend bios data area
+ */ 
 static void
 bda_init(void)
 {
@@ -114,21 +134,21 @@ interface_init(void)
     olly_printf("1.........interface_init \n");
 
     // Setup romfile items.
-    qemu_cfg_init();
+    qemu_cfg_init(); //探测 qemu_cfg_fw设备
     olly_printf("2.........interface_init \n");
 
-    coreboot_cbfs_init();
-    multiboot_init();
+    coreboot_cbfs_init(); //直接返回了，忽略
+    multiboot_init(); //直接返回了
 
     // Setup ivt/bda/ebda
-    ivt_init();
-    bda_init();
+    ivt_init(); //建立ivt
+    bda_init(); // 建立 bios data area, extend bios data area
 
     // Other interfaces
     boot_init();
-    bios32_init();
-    pmm_init();
-    pnp_init();
+    bios32_init(); // 设置BIOS32HEADER.entry 等等
+    pmm_init(); // 设置PMMHEADER.entry等等
+    pnp_init(); // 设置PNPHEADER.real_ip等等
     kbd_init();
     mouse_init();
 }
@@ -171,30 +191,30 @@ platform_hardware_setup(void)
 {
     // Make sure legacy DMA isn't running.
     olly_printf("0------platform_hardware_setup\n");
-    dma_setup();
+    dma_setup(); //重置DMA控制器
     olly_printf("1------platform_hardware_setup\n");
 
     // Init base pc hardware.
-    pic_setup();
+    pic_setup(); //重置PIC的状态
     olly_printf("2------platform_hardware_setup\n");
     thread_setup();
     olly_printf("3------platform_hardware_setup\n");
-    mathcp_setup();
+    mathcp_setup(); // 浮点处理器
     olly_printf("4------platform_hardware_setup\n");
     // Platform specific setup
-    qemu_platform_setup();
+    qemu_platform_setup(); //这个函数很重要阿
     olly_printf("5------platform_hardware_setup\n");
-    coreboot_platform_setup();
+    coreboot_platform_setup(); //直接返回了
     olly_printf("6------platform_hardware_setup\n");
 
     // Setup timers and periodic clock interrupt
     timer_setup();
     olly_printf("7------platform_hardware_setup\n");
-    clock_setup();
+    clock_setup(); // 这个很重要阿
     olly_printf("8------platform_hardware_setup\n");
 
-    // Initialize TPM
-    tpm_setup();
+    // Initialize TPM, tpm ==  Trusted Platform Module
+    tpm_setup(); 
     olly_printf("9------platform_hardware_setup\n");
 }
 
@@ -245,16 +265,17 @@ maininit(void)
 {
     olly_printf("%s\n","0----------maininit \n");
     // Initialize internal interfaces.
-    interface_init();
+    interface_init();//访问各种设备端口,初始化一些数据结构
     olly_printf("%s\n","1----------maininit \n");
 
+    //访问设备的端口，QEMU建立好设备数据结构
     // Setup platform devices.
-    platform_hardware_setup();
+    platform_hardware_setup(); // 这个函数非常非常的重要
     olly_printf("%s\n","2----------maininit \n");
 
     // Start hardware initialization (if threads allowed during optionroms)
     if (threads_during_optionroms())
-        device_hardware_setup();
+        device_hardware_setup(); // 非pci设备的setup
 
     olly_printf("%s\n","3----------maininit \n");
     // Run vga option rom
@@ -368,6 +389,7 @@ code_mutable_preinit(void)
         // Already run
         return;
     // Setup reset-vector entry point (controls legacy reboots).
+    //重置cmos
     rtc_write(CMOS_RESET_CODE, 0);
     barrier();
     HaveRunPost = 1;
@@ -386,9 +408,9 @@ dopost(void)
     code_mutable_preinit();
     olly_printf("1----------------in dopost----------------------------\n");
     // Detect ram and setup internal malloc.
-    qemu_preinit();
+    qemu_preinit(); //确定QEMU模拟的机型,Q35, i440fx之类的
     olly_printf("2----------------in dopost----------------------------\n");
-    coreboot_preinit();
+    coreboot_preinit(); //没有配置CONFIG_COREBOOT，直接返回了
     olly_printf("3----------------in dopost----------------------------\n");
     malloc_preinit();
     olly_printf("4----------------in dopost----------------------------\n");
@@ -416,6 +438,7 @@ handle_post(void)
     olly_printf("%s","3 --------------####--------------handle_post ----------###---------- \n");
     // Allow writes to modify bios area (0xf0000)
     
+    //通过PAM来设置 [ 0xc0000-0x100000 ]这段区间writable
     make_bios_writable();
     olly_printf("%s","x --------------####--------------handle_post ----------###---------- \n");
     // Now that memory is read/writable - start post process.

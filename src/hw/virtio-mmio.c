@@ -10,6 +10,16 @@
 #include "virtio-ring.h"
 #include "virtio-mmio.h"
 
+
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       virtio_mmio_setup_acpi()
+ */ 
 void virtio_mmio_setup_acpi(void)
 {
     static const char *virtio_hid = "LNRO0005";
@@ -19,16 +29,28 @@ void virtio_mmio_setup_acpi(void)
     for (dev = acpi_dsdt_find_string(NULL, virtio_hid);
          dev != NULL;
          dev = acpi_dsdt_find_string(dev, virtio_hid)) {
+
         if (acpi_dsdt_find_mem(dev, &mem, &unused) < 0)
             continue;
         if (acpi_dsdt_find_irq(dev, &irq) < 0)
             continue;
         dprintf(1, "ACPI: virtio-mmio device %s at 0x%llx, irq %lld\n",
                 acpi_dsdt_name(dev), mem, irq);
+
         virtio_mmio_setup_one(mem);
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       virtio_mmio_setup_acpi()
+ *        virtio_mmio_setup_one()
+ */
 void virtio_mmio_setup_one(u64 addr)
 {
     static const char *names[] = {

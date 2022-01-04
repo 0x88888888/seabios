@@ -126,6 +126,15 @@ parse_u32(char *cur, u32 *n)
     return cur;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     interface_init()
+ *      boot_init()
+ *       loadBiosGeometry()
+ */ 
 static void
 loadBiosGeometry(void)
 {
@@ -245,6 +254,15 @@ int boot_lchs_find_ata_device(struct pci_device *pci, int chanid, int slave,
 static char **Bootorder VARVERIFY32INIT;
 static int BootorderCount;
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     interface_init()
+ *      boot_init()
+ *       loadBootOrder()
+ */
 static void
 loadBootOrder(void)
 {
@@ -462,6 +480,15 @@ static int DefaultCDPrio     = 102;
 static int DefaultHDPrio     = 103;
 static int DefaultBEVPrio    = 104;
 
+
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     interface_init()
+ *      boot_init()
+ */ 
 void
 boot_init(void)
 {
@@ -491,6 +518,7 @@ boot_init(void)
 
     BootRetryTime = romfile_loadint("etc/boot-fail-wait", 60*1000);
 
+    //确定从哪些设备的启动次序
     loadBootOrder();
     loadBiosGeometry();
 }

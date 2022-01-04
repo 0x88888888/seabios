@@ -202,6 +202,16 @@ static void piix4_apmc_smm_setup(int isabdf, int i440_bdf)
     pci_config_writeb(i440_bdf, I440FX_SMRAM, 0x02 | 0x08);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       smm_setup()
+ *        ich9_lpc_apmc_smm_setup()
+ */
 /* PCI_VENDOR_ID_INTEL && PCI_DEVICE_ID_INTEL_ICH9_LPC */
 void ich9_lpc_apmc_smm_setup(int isabdf, int mch_bdf)
 {
@@ -232,13 +242,24 @@ void ich9_lpc_apmc_smm_setup(int isabdf, int mch_bdf)
 
 static int SMMISADeviceBDF = -1, SMMPMDeviceBDF = -1;
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       smm_device_setup()
+ */ 
 void
 smm_device_setup(void)
 {
     if (!CONFIG_USE_SMM)
         return;
 
+    /* apci==Advanced Configuration and Power Interface */
     struct pci_device *isapci, *pmpci;
+
     isapci = pci_find_device(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_82371AB_3);
     pmpci = pci_find_device(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_82441);
     if (isapci && pmpci) {
@@ -246,6 +267,8 @@ smm_device_setup(void)
         SMMPMDeviceBDF = pmpci->bdf;
         return;
     }
+
+    //Q35机型
     isapci = pci_find_device(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_ICH9_LPC);
     pmpci = pci_find_device(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_Q35_MCH);
     if (isapci && pmpci) {
@@ -254,6 +277,15 @@ smm_device_setup(void)
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       smm_setup()
+ */ 
 void
 smm_setup(void)
 {

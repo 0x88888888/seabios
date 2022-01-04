@@ -21,9 +21,9 @@ struct rmode_IVT {
 
 struct bios_data_area_s {
     // 40:00
-    u16 port_com[4];
-    u16 port_lpt[3];
-    u16 ebda_seg;
+    u16 port_com[4]; //8
+    u16 port_lpt[3]; //6
+    u16 ebda_seg;   // 2
     // 40:10
     u16 equipment_list_flags;
     u8 pad1;

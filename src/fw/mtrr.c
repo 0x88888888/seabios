@@ -33,6 +33,15 @@
 #define MTRR_MEMTYPE_WP 5
 #define MTRR_MEMTYPE_WB 6
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       mtrr_setup()
+ */ 
 void mtrr_setup(void)
 {
     if (!CONFIG_MTRR_INIT)

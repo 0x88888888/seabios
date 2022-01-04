@@ -15,10 +15,20 @@
 #include "string.h" // memset
 #include "util.h" // kbd_init
 
+
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     interface_init()
+ *      kbd_init()
+ */ 
 void
 kbd_init(void)
 {
     dprintf(3, "init keyboard\n");
+    //kbd_buf在bios_data_area_s中的偏移
     u16 x = offsetof(struct bios_data_area_s, kbd_buf);
     SET_BDA(kbd_flag1, KF1_101KBD);
     SET_BDA(kbd_buf_head, x);

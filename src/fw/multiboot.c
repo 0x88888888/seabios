@@ -59,6 +59,14 @@ mbfs_copyfile(struct romfile_s *file, void *dst, u32 maxlen)
 
 u32 __VISIBLE entry_elf_eax, entry_elf_ebx;
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     interface_init()
+ *      multiboot_init()
+ */ 
 void
 multiboot_init(void)
 {

@@ -395,6 +395,17 @@ void pci_resume(void)
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_bios_init_devices() 遍历所有的pci设备
+ *         pci_bios_init_device()
+ */ 
 static void pci_bios_init_device(struct pci_device *pci)
 {
     dprintf(1, "PCI: init bdf=%pP id=%04x:%04x\n"
@@ -417,6 +428,16 @@ static void pci_bios_init_device(struct pci_device *pci)
                          PCI_BRIDGE_CTL_SERR);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_bios_init_devices()
+ */ 
 static void pci_bios_init_devices(void)
 {
     struct pci_device *pci;
@@ -425,9 +446,22 @@ static void pci_bios_init_devices(void)
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_enable_default_vga()
+ * 
+ * 查找vga设备
+ */ 
 static void pci_enable_default_vga(void)
 {
     struct pci_device *pci;
+
 
     foreachpci(pci) {
         if (is_pci_vga(pci)) {
@@ -444,9 +478,11 @@ static void pci_enable_default_vga(void)
 
     dprintf(1, "PCI: Enabling %pP for primary VGA\n", pci);
 
+    //支持mmio和 io端口访问vga设备
     pci_config_maskw(pci->bdf, PCI_COMMAND, 0,
                      PCI_COMMAND_IO | PCI_COMMAND_MEMORY);
 
+    //往上也要打开支持mmio和 io端口访问vga设备
     while (pci->parent) {
         pci = pci->parent;
 
@@ -483,6 +519,18 @@ static void mch_mmconfig_setup(u16 bdf)
     pci_enable_mmconfig(Q35_HOST_BRIDGE_PCIEXBAR_ADDR, "q35");
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_bios_init_platform()
+ *         pci_init_device(ids==pci_platform_tbl)
+ *          mch_mem_addr_setup()
+ */ 
 static void mch_mem_addr_setup(struct pci_device *dev, void *arg)
 {
     u64 addr = Q35_HOST_BRIDGE_PCIEXBAR_ADDR;
@@ -513,9 +561,20 @@ static const struct pci_device_id pci_platform_tbl[] = {
     PCI_DEVICE_END
 };
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_bios_init_platform()
+ */ 
 static void pci_bios_init_platform(void)
 {
     struct pci_device *pci;
+    //遍历所有的pci设备
     foreachpci(pci) {
         pci_init_device(pci_platform_tbl, pci, NULL);
     }
@@ -525,6 +584,7 @@ static u8 pci_find_resource_reserve_capability(u16 bdf)
 {
     u16 device_id;
 
+    //必须是这个PCI_VENDOR_ID_REDHAT
     if (pci_config_readw(bdf, PCI_VENDOR_ID) != PCI_VENDOR_ID_REDHAT) {
         dprintf(3, "PCI: This is non-QEMU bridge.\n");
         return 0;
@@ -544,6 +604,7 @@ static u8 pci_find_resource_reserve_capability(u16 bdf)
     } while (cap &&
              pci_config_readb(bdf, cap + PCI_CAP_REDHAT_TYPE_OFFSET) !=
                               REDHAT_CAP_RESOURCE_RESERVE);
+
     if (cap) {
         u8 cap_len = pci_config_readb(bdf, cap + PCI_CAP_FLAGS);
         if (cap_len < RES_RESERVE_CAP_SIZE) {
@@ -561,6 +622,19 @@ static u8 pci_find_resource_reserve_capability(u16 bdf)
  * Bus initialization
  ****************************************************************/
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_bios_init_bus()
+ *         pci_bios_init_bus_rec(bus=0)
+ * 
+ * 构建pci总线上下级关系
+ */ 
 static void
 pci_bios_init_bus_rec(int bus, u8 *pci_bus)
 {
@@ -570,9 +644,13 @@ pci_bios_init_bus_rec(int bus, u8 *pci_bus)
     dprintf(1, "PCI: %s bus = 0x%x\n", __func__, bus);
 
     /* prevent accidental access to unintended devices */
+    /*
+     * 这个bus下的所有的bridge设备，的[PCI_SUBORDINATE_BUS,PCI_SECONDARY_BUS)，搞成最大区间
+     */
     foreachbdf(bdf, bus) {
+
         class = pci_config_readw(bdf, PCI_CLASS_DEVICE);
-        if (class == PCI_CLASS_BRIDGE_PCI) {
+        if (class == PCI_CLASS_BRIDGE_PCI) { //pci桥设备
             pci_config_writeb(bdf, PCI_SECONDARY_BUS, 255);
             pci_config_writeb(bdf, PCI_SUBORDINATE_BUS, 0);
         }
@@ -580,7 +658,8 @@ pci_bios_init_bus_rec(int bus, u8 *pci_bus)
 
     foreachbdf(bdf, bus) {
         class = pci_config_readw(bdf, PCI_CLASS_DEVICE);
-        if (class != PCI_CLASS_BRIDGE_PCI) {
+
+        if (class != PCI_CLASS_BRIDGE_PCI) { //必须是 brdige设备
             continue;
         }
         dprintf(1, "PCI: %s bdf = 0x%x\n", __func__, bdf);
@@ -609,6 +688,7 @@ pci_bios_init_bus_rec(int bus, u8 *pci_bus)
         u8 subbus = pci_config_readb(bdf, PCI_SUBORDINATE_BUS);
         pci_config_writeb(bdf, PCI_SUBORDINATE_BUS, 255);
 
+        //子总线
         pci_bios_init_bus_rec(secbus, pci_bus);
 
         if (subbus != *pci_bus) {
@@ -644,12 +724,23 @@ pci_bios_init_bus_rec(int bus, u8 *pci_bus)
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_bios_init_bus()
+ */ 
 static void
 pci_bios_init_bus(void)
 {
     u8 extraroots = romfile_loadint("etc/extra-pci-roots", 0);
     u8 pci_bus = 0;
 
+    //构建总线上下级关系
     pci_bios_init_bus_rec(0 /* host bus */, &pci_bus);
 
     if (extraroots) {
@@ -1088,12 +1179,23 @@ static void pci_region_map_entries(struct pci_bus *busses, struct pci_region *r)
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_bios_map_devices()
+ */ 
 static void pci_bios_map_devices(struct pci_bus *busses)
 {
     if (pci_bios_init_root_regions_io(busses))
         panic("PCI: out of I/O address space\n");
 
     dprintf(1, "PCI: 32: %016llx - %016llx\n", pcimem_start, pcimem_end);
+
     if (pci_bios_init_root_regions_mem(busses)) {
         struct pci_region r64_mem, r64_pref;
         r64_mem.list.first = NULL;
@@ -1114,6 +1216,7 @@ static void pci_bios_map_devices(struct pci_bus *busses)
         r64_mem.base = le64_to_cpu(romfile_loadint("etc/reserved-memory-end", 0));
         if (r64_mem.base < 0x100000000LL + RamSizeOver4G)
             r64_mem.base = 0x100000000LL + RamSizeOver4G;
+
         r64_mem.base = ALIGN(r64_mem.base, align_mem);
         r64_mem.base = ALIGN(r64_mem.base, (1LL<<30));    // 1G hugepage
         r64_pref.base = r64_mem.base + sum_mem;
@@ -1161,16 +1264,17 @@ pci_setup(void)
     dprintf(3, "pci setup\n");
 
     dprintf(1, "=== PCI bus & bridge init ===\n");
-    if (pci_probe_host() != 0) {
+    if (pci_probe_host() != 0) {  //确定PCI系统可用
         return;
     }
-    pci_bios_init_bus();
+
+    pci_bios_init_bus(); //遍历pci总线树
 
     dprintf(1, "=== PCI device probing ===\n");
-    pci_probe_devices();
+    pci_probe_devices(); //确定所有的pci设备
 
     pcimem_start = RamSize;
-    pci_bios_init_platform();
+    pci_bios_init_platform(); //设置mch的
 
     dprintf(1, "=== PCI new allocation pass #1 ===\n");
     struct pci_bus *busses = malloc_tmp(sizeof(*busses) * (MaxPCIBus + 1));
@@ -1183,11 +1287,12 @@ pci_setup(void)
         return;
 
     dprintf(1, "=== PCI new allocation pass #2 ===\n");
-    pci_bios_map_devices(busses);
+    pci_bios_map_devices(busses); // 设置PCI设备的mm空间和io空间
 
     pci_bios_init_devices();
 
     free(busses);
 
+    //为vga设备做好支持mmio准备
     pci_enable_default_vga();
 }

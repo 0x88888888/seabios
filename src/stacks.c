@@ -498,6 +498,15 @@ getCurThread(void)
 
 static u8 CanInterrupt, ThreadControl;
 
+
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      thread_setup()
+ */ 
 // Initialize the support for internal threads.
 void
 thread_setup(void)

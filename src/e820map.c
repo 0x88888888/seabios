@@ -36,6 +36,7 @@ insert_e820(int i, u64 start, u64 size, u32 type)
         return;
     }
 
+    //往后移动一个item,腾出空的位置来
     memmove(&e820_list[i+1], &e820_list[i]
             , sizeof(e820_list[0]) * (e820_count - i));
     e820_count++;
@@ -92,7 +93,8 @@ e820_add(u64 start, u64 size, u32 type)
         struct e820entry *e = &e820_list[i];
         u64 e_end = e->start + e->size;
         if (start > e_end)
-            continue;
+            continue; //下一个entry
+
         // Found position - check if an existing item needs to be split.
         if (start > e->start) {
             if (type == e->type) {

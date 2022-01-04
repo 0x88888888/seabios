@@ -60,6 +60,15 @@ u8 ShiftTSC VARFSEG;
 
 #define CALIBRATE_COUNT 0x800   // Approx 1.7ms
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      timer_setup()
+ *       tsctimer_setup()
+ */ 
 // Calibrate the CPU time-stamp-counter
 static void
 tsctimer_setup(void)
@@ -97,6 +106,15 @@ tsctimer_setup(void)
     dprintf(1, "CPU Mhz=%u\n", (TimerKHz << ShiftTSC) / 1000);
 }
 
+
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      timer_setup()
+ */ 
 // Setup internal timers.
 void
 timer_setup(void)
@@ -111,6 +129,7 @@ timer_setup(void)
     cpuid(0, &eax, &ebx, &ecx, &edx);
     if (eax > 0)
         cpuid(1, &eax, &ebx, &ecx, &cpuid_features);
+
     if (cpuid_features & CPUID_TSC)
         tsctimer_setup();
 }

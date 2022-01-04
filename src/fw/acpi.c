@@ -589,6 +589,16 @@ static const struct pci_device_id acpi_find_tbl[] = {
 };
 
 #define MAX_ACPI_TABLES 20
+
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       acpi_setup()
+ */ 
 void
 acpi_setup(void)
 {

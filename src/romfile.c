@@ -12,6 +12,7 @@
 
 static struct romfile_s *RomfileRoot VARVERIFY32INIT;
 
+//添加一个romfile_s对象到RomfileRoot 链表
 void
 romfile_add(struct romfile_s *file)
 {

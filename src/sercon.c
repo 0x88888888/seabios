@@ -508,6 +508,13 @@ handle_sercon(struct bregs *regs)
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     sercon_setup()
+ */
 void sercon_setup(void)
 {
     if (!CONFIG_SERCON)

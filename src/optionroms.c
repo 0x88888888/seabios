@@ -446,6 +446,13 @@ static void try_setup_display_other(void)
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     vgarom_setup()
+ */
 // Call into vga code to turn on console.
 void
 vgarom_setup(void)

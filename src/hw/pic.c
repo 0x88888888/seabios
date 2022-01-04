@@ -58,6 +58,14 @@ pic_reset(u8 irq0, u8 irq8)
     pic_irqmask_write(PIC_IRQMASK_DEFAULT);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      pic_setup()
+ */ 
 void
 pic_setup(void)
 {

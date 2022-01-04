@@ -644,6 +644,16 @@ int acpi_dsdt_present_eisaid(u16 eisaid)
     return acpi_dsdt_present(dev);
 }
 
+
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       acpi_dsdt_parse()
+ */
 void acpi_dsdt_parse(void)
 {
     if (!CONFIG_ACPI_PARSE)
@@ -669,9 +679,11 @@ void acpi_dsdt_parse(void)
 
     struct acpi_device *dev;
     dprintf(1, "ACPI: dumping dsdt devices\n");
+
     for (dev = acpi_dsdt_find(NULL, NULL, 0, NULL, 0);
          dev != NULL;
          dev = acpi_dsdt_find(dev, NULL, 0, NULL, 0)) {
+             
         dprintf(1, "    %s", acpi_dsdt_name(dev));
         if (dev->hid_aml)
             dprintf(1, ", hid");

@@ -151,6 +151,14 @@ handle_pmm(u16 *args)
     return ret;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     interface_init()
+ *      pmm_init()
+ */
 void
 pmm_init(void)
 {

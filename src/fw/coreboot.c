@@ -162,6 +162,11 @@ find_cb_table(void)
 static struct cb_memory *CBMemTable;
 const char *CBvendor = "", *CBpart = "";
 
+/*
+ * handle_post()
+ *  dopost()
+ *   coreboot_preinit()
+ */
 // Populate max ram and e820 map info by scanning for a coreboot table.
 void
 coreboot_preinit(void)
@@ -249,6 +254,14 @@ scan_tables(u32 start, u32 size)
         copy_table(p);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      coreboot_platform_setup()
+ */ 
 void
 coreboot_platform_setup(void)
 {

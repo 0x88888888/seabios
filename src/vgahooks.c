@@ -333,6 +333,14 @@ handle_157f(struct bregs *regs)
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     vgarom_setup()
+ *      vgahook_setup()
+ */
 // Setup
 void
 vgahook_setup(struct pci_device *pci)

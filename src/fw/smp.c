@@ -99,6 +99,16 @@ handle_smp(void)
 u32 SMPLock __VISIBLE;
 u32 SMPStack __VISIBLE;
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       smp_setup()
+ *        smp_scan()
+ */
 // find and initialize the CPUs by launching a SIPI to them
 static void
 smp_scan(void)
@@ -169,6 +179,15 @@ smp_scan(void)
             MaxCountCPUs);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       smp_setup()
+ */ 
 void
 smp_setup(void)
 {

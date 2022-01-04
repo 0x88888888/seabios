@@ -44,13 +44,20 @@ i8042_wait_write(void)
 {
     dprintf(7, "i8042_wait_write\n");
     int i;
+    olly_printf("0----------i8042_wait_write\n");
     for (i=0; i<I8042_CTL_TIMEOUT; i++) {
         u8 status = inb(PORT_PS2_STATUS);
-        if (! (status & I8042_STR_IBF))
+        olly_printf("1----------i8042_wait_write\n");
+        if (! (status & I8042_STR_IBF)){
+            olly_printf("6----------i8042_wait_write\n");
             return 0;
+        }
+        olly_printf("2----------i8042_wait_write\n");
         udelay(50);
     }
+    olly_printf("3----------i8042_wait_write\n");
     warn_timeout();
+    olly_printf("4----------i8042_wait_write\n");
     return -1;
 }
 
@@ -95,8 +102,9 @@ __i8042_command(int command, u8 *param)
     int ret = i8042_wait_write();
     if (ret)
         return ret;
+    olly_printf("0-----__i8042_command\n");
     outb(command, PORT_PS2_STATUS);
-
+    olly_printf("1-----__i8042_command\n");
     // Send parameters (if any).
     int i;
     for (i = 0; i < send; i++) {
@@ -105,6 +113,7 @@ __i8042_command(int command, u8 *param)
             return ret;
         outb(param[i], PORT_PS2_DATA);
     }
+    olly_printf("3-----__i8042_command receive=0x%x\n",receive);
 
     // Receive parameters (if any).
     for (i = 0; i < receive; i++) {
@@ -114,6 +123,7 @@ __i8042_command(int command, u8 *param)
         param[i] = inb(PORT_PS2_DATA);
         dprintf(7, "i8042 param=%x\n", param[i]);
     }
+    olly_printf("4-----__i8042_command\n");
 
     return 0;
 }

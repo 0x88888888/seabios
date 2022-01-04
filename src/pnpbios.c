@@ -74,6 +74,14 @@ get_pnp_offset(void)
 extern void entry_pnp_real(void);
 extern void entry_pnp_prot(void);
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     interface_init()
+ *      pnp_init()
+ */ 
 void
 pnp_init(void)
 {

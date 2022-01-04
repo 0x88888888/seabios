@@ -86,6 +86,15 @@ static void kvm_detect(void)
 
 struct pvclock_vcpu_time_info *kvmclock;
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       kvmclock_init()
+ */ 
 static void kvmclock_init(void)
 {
     unsigned int eax, ebx, ecx, edx, msr;
@@ -213,6 +222,15 @@ qemu_preinit(void)
 
 #define MSR_IA32_FEATURE_CONTROL 0x0000003a
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       msr_feature_control_setup()
+ */ 
 static void msr_feature_control_setup(void)
 {
     u64 feature_control_bits = romfile_loadint("etc/msr_feature_control", 0);
@@ -245,7 +263,7 @@ qemu_platform_setup(void)
 
     // Initialize pci
     olly_printf("0-------qemu_platform_setup\n");
-    pci_setup();
+    pci_setup(); //构建pci 总线树、设备，初始好这些设备
     olly_printf("1-------qemu_platform_setup\n");
     smm_device_setup();
     smm_setup();
@@ -253,7 +271,7 @@ qemu_platform_setup(void)
     // Initialize mtrr, msr_feature_control and smp
     mtrr_setup();
     msr_feature_control_setup();
-    smp_setup();
+    smp_setup(); //确定ap,发送sipi给ap
 
     // Create bios tables
     if (MaxCountCPUs <= 255) {
@@ -269,9 +287,11 @@ qemu_platform_setup(void)
 
         loader_err = romfile_loader_execute("etc/table-loader");
 
+        //定位acpi表的位置
         RsdpAddr = find_acpi_rsdp();
 
         if (RsdpAddr) {
+            //解析各种acpi表
             acpi_dsdt_parse();
             virtio_mmio_setup_acpi();
             return;
@@ -557,6 +577,15 @@ qemu_cfg_e820(void)
     dprintf(1, "RamSizeOver4G: 0x%016llx [cmos]\n", RamSizeOver4G);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     interface_init() 
+ *      qemu_cfg_init()
+ *       qemu_cfg_legacy()
+ */ 
 // Populate romfile entries for legacy fw_cfg ports (that predate the
 // "file" interface).
 static void
@@ -631,6 +660,8 @@ struct QemuCfgFile {
  *   qemu_preinit()
  *    qemu_early_e820()
  *     qemu_cfg_detect()
+ * 
+ * 访问给qemu_cfg_fw定制的端口，探测qemu_cfg_fw的功能
  */ 
 static int qemu_cfg_detect(void)
 {
@@ -654,6 +685,7 @@ static int qemu_cfg_detect(void)
     u32 id;
     qemu_cfg_read_entry(&id, QEMU_CFG_ID, sizeof(id));
 
+    //是否支持DMA
     if (id & QEMU_CFG_VERSION_DMA) {
         dprintf(1, "QEMU fw_cfg DMA interface supported\n");
         cfg_dma_enabled = 1;
@@ -661,6 +693,14 @@ static int qemu_cfg_detect(void)
     return 1;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     interface_init() 
+ *      qemu_cfg_init()
+ */ 
 void qemu_cfg_init(void)
 {
     if (!runningOnQEMU())

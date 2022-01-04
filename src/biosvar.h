@@ -33,10 +33,12 @@
  ****************************************************************/
 
 // Accessor functions
+//得到var在bios_data_area_s中的偏移
 #define GET_BDA(var) \
-    GET_FARVAR(SEG_BDA, ((struct bios_data_area_s *)0)->var)
+    GET_FARVAR(SEG_BDA /*0x40*/, ((struct bios_data_area_s *)0)->var)
+
 #define SET_BDA(var, val) \
-    SET_FARVAR(SEG_BDA, ((struct bios_data_area_s *)0)->var, (val))
+    SET_FARVAR(SEG_BDA /*0x40*/, ((struct bios_data_area_s *)0)->var, (val))
 
 // Helper function to set the bits of the equipment_list_flags variable.
 static inline void set_equipment_flags(u16 clear, u16 set) {

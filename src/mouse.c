@@ -13,6 +13,14 @@
 #include "stacks.h" // stack_hop_back
 #include "util.h" // mouse_init
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     interface_init()
+ *      mouse_init()
+ */ 
 void
 mouse_init(void)
 {
