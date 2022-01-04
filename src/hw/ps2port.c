@@ -31,7 +31,7 @@ i8042_wait_read(void)
     int i;
     for (i=0; i<I8042_CTL_TIMEOUT; i++) {
         u8 status = inb(PORT_PS2_STATUS);
-        if (status & I8042_STR_OBF)
+        if (status & I8042_STR_OBF) //最低位为1
             return 0;
         udelay(50);
     }
@@ -95,35 +95,42 @@ i8042_flush(void)
 static int
 __i8042_command(int command, u8 *param)
 {
-    int receive = (command >> 8) & 0xf;
-    int send = (command >> 12) & 0xf;
+    int receive = (command >> 8) & 0xf; //需要receive(执行in指令)的次数
+    int send = (command >> 12) & 0xf;   //需要send(执行out指令)的次数
 
     // Send the command.
     int ret = i8042_wait_write();
     if (ret)
         return ret;
-    olly_printf("0-----__i8042_command\n");
-    outb(command, PORT_PS2_STATUS);
-    olly_printf("1-----__i8042_command\n");
+    olly_printf("0-----__i8042_command cmd=0x%x\n",command);
+    outb(command, PORT_PS2_STATUS); //0x0064
+    olly_printf("1-----__i8042_command send=0x%x\n", send);
     // Send parameters (if any).
     int i;
     for (i = 0; i < send; i++) {
+        olly_printf("2-----__i8042_command");
         ret = i8042_wait_write();
+        olly_printf("3-----__i8042_command ret=0x%x \n", ret);
         if (ret)
             return ret;
         outb(param[i], PORT_PS2_DATA);
     }
-    olly_printf("3-----__i8042_command receive=0x%x\n",receive);
+    olly_printf("4-----__i8042_command receive=0x%x\n",receive);
 
     // Receive parameters (if any).
     for (i = 0; i < receive; i++) {
+        olly_printf("5-----__i8042_command\n");
         ret = i8042_wait_read();
-        if (ret)
+        olly_printf("6-----__i8042_command ret=0x%x\n",ret);
+        if (ret){
+            olly_printf("7-----__i8042_command ret=0x%x\n",ret);
             return ret;
+        }
+        olly_printf("8-----__i8042_command ret=0x%x\n",ret);
         param[i] = inb(PORT_PS2_DATA);
         dprintf(7, "i8042 param=%x\n", param[i]);
     }
-    olly_printf("4-----__i8042_command\n");
+    olly_printf("9-----__i8042_command\n");
 
     return 0;
 }
@@ -359,6 +366,16 @@ ps2_command(int aux, int command, u8 *param)
     return ret;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      ps2port_setup()
+ *       ps2_keyboard_setup()
+ *        ps2_kbd_command()
+ */ 
 int
 ps2_kbd_command(int command, u8 *param)
 {
@@ -519,6 +536,7 @@ ps2_keyboard_setup(void *data)
         return;
     }
 
+    olly_printf("3--------ps2_keyboard_setup\n");
     // Controller keyboard test.
     ret = i8042_command(I8042_CMD_KBD_TEST, param);
     if (ret)
@@ -534,6 +552,7 @@ ps2_keyboard_setup(void *data)
     /* reset keyboard and self test  (keyboard side) */
     int spinupdelay = romfile_loadint("etc/ps2-keyboard-spinup", 0);
     u32 end = timer_calc(spinupdelay);
+    olly_printf("4--------ps2_keyboard_setup\n");
     for (;;) {
         ret = ps2_kbd_command(ATKBD_CMD_RESET_BAT, param);
         if (!ret)
