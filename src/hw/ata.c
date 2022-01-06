@@ -1036,6 +1036,15 @@ ata_scan(void)
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      block_setup()
+ *       ata_setup()
+ */ 
 void
 ata_setup(void)
 {

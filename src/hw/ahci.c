@@ -625,6 +625,17 @@ ahci_port_detect(void *data)
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      block_setup()
+ *       ahci_setup()
+ *        ahci_scan()
+ *         ahci_controller_setup()
+ */ 
 // Initialize an ata controller and detect its drives.
 static void
 ahci_controller_setup(struct pci_device *pci)
@@ -672,6 +683,17 @@ ahci_controller_setup(struct pci_device *pci)
     }
 }
 
+
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      block_setup()
+ *       ahci_setup()
+ *        ahci_scan()
+ */ 
 // Locate and init ahci controllers.
 static void
 ahci_scan(void)
@@ -683,10 +705,20 @@ ahci_scan(void)
             continue;
         if (pci->prog_if != 1 /* AHCI rev 1 */)
             continue;
+
         ahci_controller_setup(pci);
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      block_setup()
+ *       ahci_setup()
+ */ 
 void
 ahci_setup(void)
 {

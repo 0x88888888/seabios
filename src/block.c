@@ -504,13 +504,22 @@ fill_edd(struct segoff_s edd, struct drive_s *drive_fl)
  * Disk driver dispatch
  ****************************************************************/
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      block_setup()
+ */ 
 void
 block_setup(void)
 {
-    floppy_setup();
-    ata_setup();
+    floppy_setup(); //先不实现，直接返回
+    ata_setup();  //先不实现，直接返回
+
     ahci_setup();
-    sdcard_setup();
+    sdcard_setup(); //先不实现，直接返回
     ramdisk_setup();
     virtio_blk_setup();
     virtio_scsi_setup();

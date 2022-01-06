@@ -7,7 +7,8 @@
 #define PORT_PS2_DATA          0x0060
 #define PORT_PS2_STATUS        0x0064
 
-// Standard commands.
+
+// Standard commands. 应该是通过0x64端口写
 #define I8042_CMD_CTL_RCTR      0x0120
 #define I8042_CMD_CTL_WCTR      0x1060
 #define I8042_CMD_CTL_TEST      0x01aa
@@ -20,7 +21,7 @@
 #define I8042_CMD_AUX_ENABLE    0x00a8
 #define I8042_CMD_AUX_SEND      0x10d4
 
-// Keyboard commands
+// Keyboard commands，应该是通过0x60端口写
 #define ATKBD_CMD_SETLEDS       0x10ed
 #define ATKBD_CMD_SSCANSET      0x10f0
 #define ATKBD_CMD_GETID         0x02f2
@@ -28,7 +29,7 @@
 #define ATKBD_CMD_RESET_DIS     0x00f5
 #define ATKBD_CMD_RESET_BAT     0x01ff
 
-// Mouse commands
+// Mouse commands, 应该是通过0x60端口写
 #define PSMOUSE_CMD_SETSCALE11  0x00e6
 #define PSMOUSE_CMD_SETSCALE21  0x00e7
 #define PSMOUSE_CMD_SETRES      0x10e8

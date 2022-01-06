@@ -543,6 +543,15 @@ sdcard_romfile_setup(void *data)
     sdcard_controller_setup((void*)addr, prio);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      block_setup()
+ *       sdcard_setup()
+ */ 
 void
 sdcard_setup(void)
 {

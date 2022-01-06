@@ -143,6 +143,16 @@ addFloppy(int floppyid, int ftype)
     boot_add_floppy(drive, desc, prio);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      block_setup()
+ *       floppy_setup()
+ * 
+ */ 
 void
 floppy_setup(void)
 {
