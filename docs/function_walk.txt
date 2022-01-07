@@ -1,0 +1,135 @@
+RomfileRoot: 所有的romfile_s对象链表
+
+handle_post()
+    serial_debug_preinit()
+    debug_banner()
+    xen_preinit()
+    make_bios_writable()   通过PAM来设置 [ 0xc0000-0x100000 ]这段区间writable
+    dopost()
+        code_mutable_preinit
+        qemu_preinit()
+            qemu_detect()
+                qemu_debug_preinit()
+                pci_config_readw(bdf==0, PCI_VENDOR_ID)  通过bdf=0 ，vmm返回给seabios的结果来提示 用户运行在哪个机型上
+            kvm_detect()
+                cpuid值令, vmm返回，提示信息vmm是否运行在 kvm之上
+            e820_add(0xfffc0000, 256*1024, E820_RESERVED);  4G的最高的这一部分留给bios
+        coreboot_preinit
+        malloc_preinit
+            调用e820_add，构建出e820 表
+        reloc_preinit(maininit)
+            maininit()
+                interface_init()  这个函数很重要
+                    malloc_init()
+                    qemu_cfg_init()  这个函数很重要
+                        qemu_cfg_detect()
+                            写0x510
+                            读0x511
+                            来发现qemu_cfg_fw设备
+                        qemu_cfg_legacy()
+                        qemu_cfg_read_entry(), Load files found in the fw_cfg file directory
+                          qemu_cfg_read()
+                          qemu_romfile_add()
+                        qemu_cfg_e820()
+                    coreboot_cbfs_init() 忽略
+                    multiboot_init()     忽略
+                    ivt_init()  建立 ivt
+                    bda_init()  建立 bios data area, extend bios data area 
+                    boot_init()
+                        loadBootOrder()
+                        loadBiosGeometry()
+                    bios32_init()
+                    pmm_init()
+                    pnp_init()
+                    kbd_init()
+                    mouse_init()
+                platform_hardware_setup()  这个函数很重要
+                    dma_setup()
+                    pic_setup()
+                    thread_setup()
+                    mathcp_setup()
+                    qemu_platform_setup()  这个函数很重要
+                        kvmclock_init()
+                        pci_setup()        建立pci设备树
+                            pci_probe_host()  找到bdf==0，这个MCH,相当与pci host或则RC
+                            pci_bios_init_bus() 建立总线上下级树
+                            pci_probe_devices()  确定所有的pci设备
+                            pci_bios_init_platform() 设置MCH
+                            pci_bios_check_devices()
+                            pci_bios_map_devices()
+                            pci_bios_init_devices()
+                            pci_enable_default_vga()
+                        smm_device_setup()
+                        smm_setup()
+                            ich9_lpc_apmc_smm_setup()
+                        mtrr_setup()
+                        msr_feature_control_setup()
+                        smp_setup()
+                            smp_scan()
+                        pirtable_setup()
+                        mptable_setup()  这个配置ioapic ,lapic
+                        smbios_setup()
+                        find_acpi_rsdp()    找到acpi的 rsdt表
+                        acpi_dsdt_parse()   解析acpi表
+                        virtio_mmio_setup_acpi()
+                        acpi_setup()如果上面没有找到acpi表，就用这个去构建
+                    coreboot_platform_setup()
+                    timer_setup()
+                    clock_setup()
+                        pit_setup()
+                        rtc_setup()
+                        rtc_updating()
+                    tpm_setup()  tpm == Trusted Platform Module
+                vgarom_setup()
+                    vgahook_setup()
+                    init_pcirom()
+                    VgaROM = (void*)BUILD_ROM_START;
+                sercon_setup()
+                enable_vga_console()
+                device_hardware_setup()
+                    usb_setup()
+                    ps2port_setup()
+                        acpi_dsdt_present_eisaid(0x0303)   确定ps2 controller是否存在
+                        ps2_keyboard_setup()
+                            i8042_command(I8042_CMD_KBD_DISABLE)
+                            i8042_command(I8042_CMD_AUX_DISABLE)
+                            i8042_command(I8042_CMD_CTL_TEST)
+                            i8042_command(I8042_CMD_KBD_TEST)
+                            ps2_kbd_command(ATKBD_CMD_RESET_BAT)
+                            ps2_kbd_command(ATKBD_CMD_RESET_DIS)
+                            ps2_kbd_command(ATKBD_CMD_SSCANSET)
+                            ps2_kbd_command(ATKBD_CMD_ENABLE)
+                    block_setup()
+                        floppy_setup()
+                        ata_setup()
+                        ahci_setup()
+                            ahci_scan()
+                                ahci_controller_setup()
+                                    pci_enable_membar(pci, PCI_BASE_ADDRESS_5)
+                                    for(pnr=0; pnr<= max; npr++) { 
+                                        port = ahci_port_alloc(ctrl, pnr)
+                                        ahci_port_detect()
+                                            ahci_port_reset()
+                                            ahci_port_setup()
+                                    }
+
+                        sdcard_setup()
+                        ramdisk_setup()
+                        virtio_blk_setup()
+                        virtio_scsi_setup()
+                        lsi_scsi_setup()
+                        esp_scsi_setup()
+                        megasas_setup()
+                        pvscsi_setup()
+                        mpt_scsi_setup()
+                        nvme_setup()
+                    lpt_setup()
+                    serial_setup()
+                    cbfs_payload_setup()
+                optionrom_setup()
+                interactive_bootmenu()
+                prepareboot()
+                make_bios_readonly()
+                startBoot()
+
+
