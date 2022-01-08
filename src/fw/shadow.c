@@ -137,11 +137,11 @@ static int ShadowBDF = -1;
 void
 make_bios_writable(void)
 {
-    olly_printf("%s","0 --####make_bios_writable -###- \n");
+    
     if (!CONFIG_QEMU || runningOnXen())
         return;
 
-    olly_printf("%s","1 --####--make_bios_writable -###- \n");
+
 
 
     dprintf(3, "enabling shadow ram\n");

@@ -59,6 +59,17 @@ int apic_id_is_present(u8 apic_id)
     return !!(FoundAPICIDs[apic_id/32] & (1ul << (apic_id % 32)));
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       smp_setup()
+ *        smp_scan()
+ *         apic_id_init()
+ */
 static int
 apic_id_init(void)
 {

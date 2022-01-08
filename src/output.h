@@ -69,5 +69,6 @@ void hexdump(const void *d, int len);
 #define olly_printf(fmt,args...)    \
             dprintf(1, fmt, ##args)
 
+#include "stack_dbg.h"
 
 #endif // output.h

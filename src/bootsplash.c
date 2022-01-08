@@ -36,6 +36,13 @@ call16_int10(struct bregs *br)
  * VGA text / graphics console
  ****************************************************************/
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     enable_vga_console()
+ */ 
 void
 enable_vga_console(void)
 {

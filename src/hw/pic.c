@@ -37,6 +37,15 @@ pic_irqmask_mask(u16 off, u16 on)
     outb((inb(PORT_PIC2_DATA) & ~pic2off) | pic2on, PORT_PIC2_DATA);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      pic_setup()
+ *       pic_reset()
+ */ 
 void
 pic_reset(u8 irq0, u8 irq8)
 {

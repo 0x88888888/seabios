@@ -34,16 +34,20 @@ pci_probe_devices(void)
     dprintf(3, "PCI probe\n");
     struct pci_device *busdevs[256];
     memset(busdevs, 0, sizeof(busdevs));
-    //所有的pci设备
+    //所有的pci设备都插入到这个链表
     struct hlist_node **pprev = &PCIDevices.first;
     int extraroots = romfile_loadint("etc/extra-pci-roots", 0);
     int bus = -1, lastbus = 0, rootbuses = 0, count=0;
     //所有的bus号
+    
     while (bus < 0xff && (bus < MaxPCIBus || rootbuses < extraroots)) {
         bus++;
         int bdf;
         //bus下的设备
+        olly_printf("+++++++++++++++++++++++++++++++++++++++++++++++++++ pci_probe_devices bus=0x%x\n", bus);
         foreachbdf(bdf, bus) { //qemu有这个设备，所以已经发现设备了
+
+            olly_printf("pci_probe_devices: found device, bdf = 0x%x\n", bdf);    
 
             // Create new pci_device struct and add to list.
             struct pci_device *dev = malloc_tmp(sizeof(*dev));
@@ -52,6 +56,8 @@ pci_probe_devices(void)
                 return;
             }
             memset(dev, 0, sizeof(*dev));
+
+            //将pci设备加入链表
             hlist_add(&dev->node, pprev);
             pprev = &dev->node.next;
             count++;
@@ -74,18 +80,22 @@ pci_probe_devices(void)
             dev->bdf = bdf;
             dev->parent = parent;
             dev->rootbus = rootbus;
-            u32 vendev = pci_config_readl(bdf, PCI_VENDOR_ID);
+            u32 vendev = pci_config_readl(bdf, PCI_VENDOR_ID); //0x00
             dev->vendor = vendev & 0xffff;
             dev->device = vendev >> 16;
-            u32 classrev = pci_config_readl(bdf, PCI_CLASS_REVISION);
+            u32 classrev = pci_config_readl(bdf, PCI_CLASS_REVISION); //0x08
             dev->class = classrev >> 16;
             dev->prog_if = classrev >> 8;
             dev->revision = classrev & 0xff;
-            dev->header_type = pci_config_readb(bdf, PCI_HEADER_TYPE);
-            u8 v = dev->header_type & 0x7f;
+            dev->header_type = pci_config_readb(bdf, PCI_HEADER_TYPE); // 0x0e
+
+            u8 v = dev->header_type & 0x7f; //低7bit
+
+            //bridge设备
             if (v == PCI_HEADER_TYPE_BRIDGE || v == PCI_HEADER_TYPE_CARDBUS) {
-                u8 secbus = pci_config_readb(bdf, PCI_SECONDARY_BUS);
+                u8 secbus = pci_config_readb(bdf, PCI_SECONDARY_BUS); //0x19
                 dev->secondary_bus = secbus;
+
                 if (secbus > bus && !busdevs[secbus])
                     busdevs[secbus] = dev;
                 if (secbus > MaxPCIBus)
@@ -94,6 +104,8 @@ pci_probe_devices(void)
             dprintf(4, "PCI device %pP (vd=%04x:%04x c=%04x)\n"
                     , dev, dev->vendor, dev->device, dev->class);
         }
+    
+        olly_printf("--------------------------------------------------- pci_probe_devices bus=0x%x\n", bus);
     }
     dprintf(1, "Found %d PCI devices (max PCI bus is %02x)\n", count, MaxPCIBus);
 }

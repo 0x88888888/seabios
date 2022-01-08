@@ -69,9 +69,9 @@ u32 pci_config_readl(u16 bdf, u32 addr)
     if (!MODESEGMENT && mmconfig) {
         return readl(mmconfig_addr(bdf, addr));
     } else {
-        olly_printf("pci_config_readl : out ioconfig_cmd(bdf, addr)=0x%x port=0x%x \n", ioconfig_cmd(bdf, addr), PORT_PCI_CMD);
+        //olly_printf("pci_config_readl : out ioconfig_cmd(bdf, addr)=0x%x port=0x%x \n", ioconfig_cmd(bdf, addr), PORT_PCI_CMD);
         outl(ioconfig_cmd(bdf, addr), PORT_PCI_CMD);
-        olly_printf("pci_config_readl : in port=0x%x \n", PORT_PCI_DATA);
+        //olly_printf("pci_config_readl : in port=0x%x \n", PORT_PCI_DATA);
         return inl(PORT_PCI_DATA);
     }
 }
@@ -95,10 +95,10 @@ u8 pci_config_readb(u16 bdf, u32 addr)
     if (!MODESEGMENT && mmconfig) {
         return readb(mmconfig_addr(bdf, addr));
     } else {
-        olly_printf("0 --pci_config_readb --###-- out: ioconfig_cmd(bdf, addr)=0x%x \n", ioconfig_cmd(bdf, addr));
-        outl(ioconfig_cmd(bdf, addr), PORT_PCI_CMD);
-        olly_printf("1 --####--pci_config_readb --###-- in: PORT_PCI_DATA+(addr & 3)=0x%x \n", PORT_PCI_DATA+(addr & 3));
-        return inb(PORT_PCI_DATA + (addr & 3));
+        //olly_printf("0 --pci_config_readb --###-- out: ioconfig_cmd(bdf, addr)=0x%x \n", ioconfig_cmd(bdf, addr));
+        outl(ioconfig_cmd(bdf, addr), PORT_PCI_CMD);  //0x0cf8
+        //olly_printf("1 --####--pci_config_readb --###-- in: PORT_PCI_DATA+(addr & 3)=0x%x \n", PORT_PCI_DATA+(addr & 3));
+        return inb(PORT_PCI_DATA + (addr & 3)); //0xcfc
     }
 }
 
@@ -122,14 +122,14 @@ pci_enable_mmconfig(u64 addr, const char *name)
 u8 pci_find_capability(u16 bdf, u8 cap_id, u8 cap)
 {
     int i;
-    u16 status = pci_config_readw(bdf, PCI_STATUS);
+    u16 status = pci_config_readw(bdf, PCI_STATUS);//0x06
 
     if (!(status & PCI_STATUS_CAP_LIST))
         return 0;
 
     if (cap == 0) {
         /* find first */
-        cap = pci_config_readb(bdf, PCI_CAPABILITY_LIST);
+        cap = pci_config_readb(bdf, PCI_CAPABILITY_LIST); //0x34
     } else {
         /* find next */
         cap = pci_config_readb(bdf, cap + PCI_CAP_LIST_NEXT);
@@ -148,26 +148,27 @@ int
 pci_next(int bdf, int bus)
 {
     //olly_printf("%s","0 --####--pci_next --###-- \n");
+    //0号function,并且是multi function设备
     if (pci_bdf_to_fn(bdf) == 0
-        && (pci_config_readb(bdf, PCI_HEADER_TYPE) & 0x80) == 0)
+        && (pci_config_readb(bdf, PCI_HEADER_TYPE) & 0x80) == 0)  //最高bit为1 ，什么意思?
         // Last found device wasn't a multi-function device - skip to
         // the next device.
         bdf += 8; 
     else
-        bdf += 1;
+        bdf += 1;//0号fn跳过
 
     
     for (;;) {
         if (pci_bdf_to_bus(bdf) != bus)
-            return -1;
+            return -1; //
 
-        olly_printf("1 --####--pci_next --###-- bdf=0x%x bus=0x%x \n", bdf, bus);
+        //olly_printf("1 --####--pci_next --###-- bdf=0x%x bus=0x%x \n", bdf, bus);
         u16 v = pci_config_readw(bdf, PCI_VENDOR_ID);
         if (v != 0x0000 && v != 0xffff)
             // Device is present.
             return bdf;
 
-        if (pci_bdf_to_fn(bdf) == 0)
+        if (pci_bdf_to_fn(bdf) == 0)//是0号fn，并且这个fn返回的PCI_VENDOR_ID ==0,说明这个dev号下面没有fn了, 就跳到下一个去了
             bdf += 8;
         else
             bdf += 1;
@@ -189,10 +190,14 @@ int
 pci_probe_host(void)
 {
     outl(0x80000000, PORT_PCI_CMD);
+    olly_printf("----------------------------------------pci_probe_host 0\n");
     if (inl(PORT_PCI_CMD) != 0x80000000) {
+        olly_printf("----------------------------------------pci_probe_host 1\n");
         dprintf(1, "Detected non-PCI system\n");
         return -1;
     }
+    olly_printf("----------------------------------------pci_probe_host 2\n");
+
     return 0;
 }
 

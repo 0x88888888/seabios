@@ -10,6 +10,9 @@
 #include "romfile.h" // struct romfile_s
 #include "string.h" // memcmp
 
+/*
+ * 所有的romfile对象
+ */
 static struct romfile_s *RomfileRoot VARVERIFY32INIT;
 
 //添加一个romfile_s对象到RomfileRoot 链表
@@ -68,6 +71,7 @@ romfile_loadfile(const char *name, int *psize)
     }
 
     dprintf(5, "Copying romfile '%s' (len %d)\n", name, filesize);
+    //将数据复制到data地址
     int ret = file->copy(file, data, filesize);
     if (ret < 0) {
         free(data);

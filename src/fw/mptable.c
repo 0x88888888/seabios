@@ -18,6 +18,15 @@
 #include "util.h" // MaxCountCPUs
 #include "x86.h" // cpuid
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       mptable_setup()
+ */ 
 void
 mptable_setup(void)
 {

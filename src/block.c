@@ -515,20 +515,33 @@ fill_edd(struct segoff_s edd, struct drive_s *drive_fl)
 void
 block_setup(void)
 {
-    floppy_setup(); //先不实现，直接返回
-    ata_setup();  //先不实现，直接返回
-
+    olly_printf("0--------block_setup\n");
+    floppy_setup(); // olly-vmm先不实现 floppy
+    olly_printf("1--------block_setup\n");
+    ata_setup();  //先不实现，直接返回, olly-vmm先不实现 floppy
+    olly_printf("2--------block_setup\n");
     ahci_setup();
+    olly_printf("3--------block_setup\n");
     sdcard_setup(); //先不实现，直接返回
+    olly_printf("4--------block_setup\n");
     ramdisk_setup();
+    olly_printf("5--------block_setup\n");
     virtio_blk_setup();
+    olly_printf("6--------block_setup\n");
     virtio_scsi_setup();
+    olly_printf("7--------block_setup\n");
     lsi_scsi_setup();
+    olly_printf("8--------block_setup\n");
     esp_scsi_setup();
+    olly_printf("9--------block_setup\n");
     megasas_setup();
+    olly_printf("10--------block_setup\n");
     pvscsi_setup();
+    olly_printf("11--------block_setup\n");
     mpt_scsi_setup();
+    olly_printf("12--------block_setup\n");
     nvme_setup();
+    olly_printf("13--------block_setup\n");
 }
 
 // Fallback handler for command requests not implemented by drivers

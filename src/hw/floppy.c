@@ -131,6 +131,16 @@ init_floppy(int floppyid, int ftype)
     return drive;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      block_setup()
+ *       floppy_setup()
+ *        addFloppy()
+ */
 static void
 addFloppy(int floppyid, int ftype)
 {
@@ -166,9 +176,11 @@ floppy_setup(void)
     dprintf(3, "init floppy drives\n");
 
     if (CONFIG_QEMU) {
+        //先查看是否有 floppy设备
         u8 type = rtc_read(CMOS_FLOPPY_DRIVE_TYPE);
         if (type & 0xf0)
             addFloppy(0, type >> 4);
+
         if (type & 0x0f)
             addFloppy(1, type & 0x0f);
     } else {

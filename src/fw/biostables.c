@@ -491,6 +491,7 @@ smbios_romfile_setup(void)
         tables = malloc_high(ep.structure_table_length);
     else
         tables = malloc_fseg(ep.structure_table_length);
+        
     if (!tables) {
         warn_noalloc();
         free(qtables);

@@ -89,6 +89,15 @@ static struct pir_table PIR_TABLE = {
     }
 };
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pirtable_setup()
+ */ 
 void
 pirtable_setup(void)
 {

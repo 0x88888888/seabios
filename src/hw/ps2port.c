@@ -45,15 +45,15 @@ i8042_wait_write(void)
 {
     dprintf(7, "i8042_wait_write\n");
     int i;
-    olly_printf("0----------i8042_wait_write\n");
+     
     for (i=0; i<I8042_CTL_TIMEOUT; i++) {
         u8 status = inb(PORT_PS2_STATUS);
-        olly_printf("1----------i8042_wait_write status=%x\n", status);
+        //olly_printf("1----------i8042_wait_write status=%x\n", status);
         if (! (status & I8042_STR_IBF)){
-            olly_printf("6----------i8042_wait_write status=%x\n", status);
+            olly_printf(" -i8042_wait_write status=%x    OK\n", status);
             return 0;
         }
-        olly_printf("2----------i8042_wait_write status=%x\n", status);
+        olly_printf(" --i8042_wait_write status=%x\n   failed", status);
         udelay(50);
     }
    // olly_printf("3----------i8042_wait_write status=%x\n", status);
@@ -117,38 +117,32 @@ __i8042_command(int command, u8 *param)
     int ret = i8042_wait_write();
     if (ret)
         return ret;
-    olly_printf("0-----__i8042_command cmd=0x%x  param[0]=0x%x param[1]=0x%x\n",command, param[0], param[1]);
+    
     outb(command, PORT_PS2_STATUS); //0x0064，发送command到0x64端口
-    olly_printf("1-----__i8042_command send=0x%x\n", send);
+    
     // Send parameters (if any).
     int i;
     //如果有数据要发送，就还有发送数据到0x60数据端口
     for (i = 0; i < send; i++) {
-        olly_printf("2-----__i8042_command\n");
+        
         ret = i8042_wait_write();
-        olly_printf("3-----__i8042_command ret=0x%x param[%d]=0x%x\n", ret, i, param[i]);
+        
         if (ret)
             return ret;
         outb(param[i], PORT_PS2_DATA);
     }
-    olly_printf("4-----__i8042_command receive=0x%x\n",receive);
+    
 
     // Receive parameters (if any).
     //发送命令后，如果需要从设备接收数据，从0x60数据端口接收数据
     for (i = 0; i < receive; i++) {
-        olly_printf("5-----__i8042_command\n");
         ret = i8042_wait_read();
-        olly_printf("6-----__i8042_command ret=0x%x\n",ret);
         if (ret){
-            olly_printf("7-----__i8042_command ret=0x%x\n",ret);
             return ret;
         }
-        olly_printf("8-----__i8042_command ret=0x%x\n",ret);
         param[i] = inb(PORT_PS2_DATA);
         dprintf(7, "i8042 param=%x\n", param[i]);
     }
-    olly_printf("9-----__i8042_command\n");
-
     return 0;
 }
 
@@ -179,7 +173,6 @@ static int
 i8042_kbd_write(u8 c)
 {
     dprintf(7, "i8042_kbd_write c=%d\n", c);
-    olly_printf("i8042_kbd_write c=%d\n", c);
     int ret = i8042_wait_write();
     if (! ret)
         outb(c, PORT_PS2_DATA);
@@ -221,12 +214,10 @@ ps2_recvbyte(int aux, int needack, int timeout)
     for (;;) {
         u8 status = inb(PORT_PS2_STATUS); //0x0064
 
-        olly_printf("ps2_recvbyte-----------0x%x\n", status);
         if (status & I8042_STR_OBF) { //0x01
             u8 data = inb(PORT_PS2_DATA); //0x0060
             dprintf(7, "ps2 read %x\n", data);
 
-            olly_printf("ps2_recvbyte : aux=0x%x status=0x%x !!(status & I8042_STR_AUXDATA) =0x%x data=0x%x\n", aux,status, !!(status & I8042_STR_AUXDATA) , data);
             if (!!(status & I8042_STR_AUXDATA) == aux) {
                 if (!needack)
                     return data;
@@ -253,7 +244,6 @@ ps2_recvbyte(int aux, int needack, int timeout)
 static int
 ps2_sendbyte(int aux, u8 command, int timeout)
 {
-    olly_printf("ps2_sendbyte-d---------000----\n");
     dprintf(7, "ps2_sendbyte aux=%d cmd=%x\n", aux, command);
     int ret;
     if (aux)
@@ -264,10 +254,8 @@ ps2_sendbyte(int aux, u8 command, int timeout)
     if (ret)
         return ret;
 
-    olly_printf("ps2_sendbyte-d--------1111-----\n");
     // Read ack. 从qemuin一个ACK过来
     ret = ps2_recvbyte(aux, 1, timeout);
-    olly_printf("ps2_sendbyte-d--------222----- ret=0x%x\n", ret);
     if (ret < 0)
         return ret;
     if (ret != PS2_RET_ACK)
@@ -305,10 +293,8 @@ __ps2_command(int aux, int command, u8 *param)
                  & ~(I8042_CTR_KBDINT/*bit 0*/|I8042_CTR_AUXINT /* bit 1 */));
 
     dprintf(6, "i8042 ctr old=%x new=%x\n", ps2ctr, newctr);
-    olly_printf("------------1-----__ps2_command receive=0x%x send=0x%x \n", receive, send);
     //通过0x64端口的0x60命令 将nectrl out到 qemu的ps2 controller.
     int ret = i8042_command(I8042_CMD_CTL_WCTR, &newctr);//0x60
-    olly_printf("-------------243-0-----__ps2_command ret=%x\n",ret);
     if (ret) //前一步，必须要返回0
         return ret;
 
@@ -322,26 +308,23 @@ __ps2_command(int aux, int command, u8 *param)
     else // keyboard
         newctr &= ~I8042_CTR_KBDDIS;//启动key board
 
-    olly_printf("xyz--------------0-----__ps2_command  command=0x%x\n", command);
     ret = i8042_command(I8042_CMD_CTL_WCTR, &newctr);
-    olly_printf("-------tx------00-----__ps2_command\n");
+
     if (ret)
         goto fail;
  
-    olly_printf("    1-----__ps2_command\n");
+ 
     if ((u8)command == (u8)ATKBD_CMD_RESET_BAT) { //0xff
         // Reset is special wrt timeouts.
-        olly_printf("2-----__ps2_command aux=0x%x, command=0x%x\n",aux, command);
+ 
         // Send command.
         ret = ps2_sendbyte(aux, command, 1000); // 通过data port发送 command
-        olly_printf("3-----__ps2_command  ret=0x%x\n",ret);
+ 
         if (ret)
             goto fail;
 
         // Receive parameters.
-        olly_printf("4-----__ps2_command  \n");
         ret = ps2_recvbyte(aux, 0, 4000);
-        olly_printf("5-----__ps2_command  ret=0x%x receive=%x\n",ret,receive);
         if (ret < 0)
             goto fail;
         param[0] = ret;
@@ -374,14 +357,14 @@ __ps2_command(int aux, int command, u8 *param)
         } else {
             param[1] = 0;
         }
-    } else {
-        olly_printf("  0  __ps2_command  else command=0x%x send=0x%x receive=0x%x \n", command, send, receive);
+    } else {//0x00f4
         // Send command.
+        olly_printf("------------1--------------------------------------ps2\n");
         ret = ps2_sendbyte(aux, command, 200);
+        olly_printf("------2--------------------------------------------ps2\n");
         if (ret)
             goto fail;
 
-        olly_printf("  1  __ps2_command  else command=0x%x send=0x%x receive=0x%x \n", command, send, receive);
         // Send parameters (if any).
         int i;
         for (i = 0; i < send; i++) {
@@ -389,7 +372,6 @@ __ps2_command(int aux, int command, u8 *param)
             if (ret)
                 goto fail;
         }
-        olly_printf("/////////////\n");
         // Receive parameters (if any).
         for (i = 0; i < receive; i++) {
             ret = ps2_recvbyte(aux, 0, 500);
@@ -397,7 +379,7 @@ __ps2_command(int aux, int command, u8 *param)
                 goto fail;
             param[i] = ret;
         }
-        olly_printf("-------__ps2_command-----\n");
+
     }
 
     ret = 0;
@@ -446,7 +428,6 @@ ps2_kbd_command(int command, u8 *param)
 
     if (! CONFIG_PS2PORT)
         return -1;
-    olly_printf("0--------ps2_kbd_command\n");
     return ps2_command(0, command, param);
 }
 

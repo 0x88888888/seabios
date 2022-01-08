@@ -336,6 +336,18 @@ ahci_port_reset(struct ahci_ctrl_s *ctrl, u32 pnr)
         ahci_port_writel(ctrl, pnr, PORT_IRQ_STAT, val);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      block_setup()
+ *       ahci_setup()
+ *        ahci_scan()
+ *         ahci_controller_setup()
+ *          ahci_port_alloc()
+ */ 
 static struct ahci_port_s*
 ahci_port_alloc(struct ahci_ctrl_s *ctrl, u32 pnr)
 {
@@ -422,6 +434,19 @@ static struct ahci_port_s* ahci_port_realloc(struct ahci_port_s *port)
 
 #define MAXMODEL 40
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      block_setup()
+ *       ahci_setup()
+ *        ahci_scan()
+ *         ahci_controller_setup()
+ *          ahci_port_detect()
+ *           ahci_port_setup()
+ */
 /* See ahci spec chapter 10.1 "Software Initialization of HBA" */
 static int ahci_port_setup(struct ahci_port_s *port)
 {
@@ -598,6 +623,18 @@ static int ahci_port_setup(struct ahci_port_s *port)
     return 0;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      block_setup()
+ *       ahci_setup()
+ *        ahci_scan()
+ *         ahci_controller_setup()
+ *          ahci_port_detect()
+ */ 
 // Detect any drives attached to a given controller.
 static void
 ahci_port_detect(void *data)
@@ -643,6 +680,7 @@ ahci_controller_setup(struct pci_device *pci)
     struct ahci_port_s *port;
     u32 val, pnr, max;
 
+    olly_printf("ahci_controller_setup\n");
     if (create_bounce_buf() < 0)
         return;
 
@@ -698,9 +736,11 @@ ahci_controller_setup(struct pci_device *pci)
 static void
 ahci_scan(void)
 {
+    olly_printf("0---ahci_scan\n");
     // Scan PCI bus for ATA adapters
     struct pci_device *pci;
     foreachpci(pci) {
+        olly_printf("pci->class=0x%x\n",pci->class);
         if (pci->class != PCI_CLASS_STORAGE_SATA)
             continue;
         if (pci->prog_if != 1 /* AHCI rev 1 */)
