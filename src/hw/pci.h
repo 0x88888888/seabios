@@ -29,6 +29,9 @@ static inline u16 pci_bus_devfn_to_bdf(int bus, u16 devfn) {
     return (bus << 8) | devfn;
 }
 
+/* 
+ *
+ */
 #define foreachbdf(BDF, BUS)                                    \
     for (BDF=pci_next(pci_bus_devfn_to_bdf((BUS), 0)-1, (BUS))  \
          ; BDF >= 0                                             \

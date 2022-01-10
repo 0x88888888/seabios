@@ -34,9 +34,9 @@ void pci_config_writel(u16 bdf, u32 addr, u32 val)
     if (!MODESEGMENT && mmconfig) {
         writel(mmconfig_addr(bdf, addr), val);
     } else {
-        olly_printf("pci_config_writel port=0xcf8 bdf=0x%x ,addr=0x%x , ioconfig_cmd(bdf, addr)=0x%x\n", bdf, addr, ioconfig_cmd(bdf, addr));
+        //olly_printf("pci_config_writel port=0xcf8 bdf=0x%x ,addr=0x%x , ioconfig_cmd(bdf, addr)=0x%x\n", bdf, addr, ioconfig_cmd(bdf, addr));
         outl(ioconfig_cmd(bdf, addr), PORT_PCI_CMD);
-        olly_printf("pci_config_writel port=0xcfc val=0x%x \n", val);
+        //olly_printf("pci_config_writel port=0xcfc val=0x%x \n", val);
         outl(val, PORT_PCI_DATA);
     }
 }
@@ -150,17 +150,17 @@ pci_next(int bdf, int bus)
     //olly_printf("%s","0 --####--pci_next --###-- \n");
     //0号function,并且是multi function设备
     if (pci_bdf_to_fn(bdf) == 0
-        && (pci_config_readb(bdf, PCI_HEADER_TYPE) & 0x80) == 0)  //最高bit为1 ，什么意思?
+        && (pci_config_readb(bdf, PCI_HEADER_TYPE) & 0x80) == 0)  //最高bit为1 ,multi funciton
         // Last found device wasn't a multi-function device - skip to
         // the next device.
         bdf += 8; 
     else
-        bdf += 1;//0号fn跳过
+        bdf += 1;//bdf的下一个bdf
 
     
     for (;;) {
         if (pci_bdf_to_bus(bdf) != bus)
-            return -1; //
+            return -1; //bdf得到的bus号不在当前讨论范围
 
         //olly_printf("1 --####--pci_next --###-- bdf=0x%x bus=0x%x \n", bdf, bus);
         u16 v = pci_config_readw(bdf, PCI_VENDOR_ID);

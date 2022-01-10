@@ -736,7 +736,7 @@ ahci_controller_setup(struct pci_device *pci)
 static void
 ahci_scan(void)
 {
-    olly_printf("0---ahci_scan\n");
+    olly_printf("0------------------------------------------------ahci_scan\n");
     // Scan PCI bus for ATA adapters
     struct pci_device *pci;
     foreachpci(pci) {

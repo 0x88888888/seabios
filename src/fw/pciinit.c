@@ -89,6 +89,10 @@ static u32 pci_bar(struct pci_device *pci, int region_num)
     return type == PCI_HEADER_TYPE_BRIDGE ? PCI_ROM_ADDRESS1 : PCI_ROM_ADDRESS;
 }
 
+/*
+ *
+ * 这里是正式的去set pci的bar了
+ */
 static void
 pci_set_io_region_addr(struct pci_device *pci, int bar, u64 addr, int is64)
 {
@@ -783,28 +787,31 @@ pci_bios_get_bar(struct pci_device *pci, int bar,
     u16 bdf = pci->bdf;
     u32 old = pci_config_readl(bdf, ofs); // 去读出这个bar的信息
     int is64 = 0, type = PCI_REGION_TYPE_MEM;
-    u64 mask;
+    u64 mask; // mask 高位为1表示 bar 有效的地址部分，低位为0表示的地址的属性
 
     if (bar == PCI_ROM_SLOT /* 6*/) {
-        mask = PCI_ROM_ADDRESS_MASK;
+        mask = PCI_ROM_ADDRESS_MASK; /* ~0x07fful  ==0xfffff800 */
         pci_config_writel(bdf, ofs, mask);
+        //olly_printf("===============================pci_bios_get_bar  bdf=0x%x bar=0x%x\n", pci->bdf, bar);
     } else {
-        if (old & PCI_BASE_ADDRESS_SPACE_IO) { //io空间类型的bar
-            mask = PCI_BASE_ADDRESS_IO_MASK;
+        if (old & PCI_BASE_ADDRESS_SPACE_IO) { //bit 0, io空间类型的bar
+            mask = PCI_BASE_ADDRESS_IO_MASK;/* ~0x03ul */
             type = PCI_REGION_TYPE_IO;
         } else {
-            mask = PCI_BASE_ADDRESS_MEM_MASK;  //mmio空间类型的bar
-            if (old & PCI_BASE_ADDRESS_MEM_PREFETCH)
+            mask = PCI_BASE_ADDRESS_MEM_MASK;  // ~0x0ful mmio空间类型的bar
+            if (old & PCI_BASE_ADDRESS_MEM_PREFETCH) /* bit 3 */
                 type = PCI_REGION_TYPE_PREFMEM;
 
             is64 = ((old & PCI_BASE_ADDRESS_MEM_TYPE_MASK)
-                    == PCI_BASE_ADDRESS_MEM_TYPE_64);
+                    == PCI_BASE_ADDRESS_MEM_TYPE_64); /* bit2 == 1 ,是否是64bit的地址*/
         }
         pci_config_writel(bdf, ofs, ~0);//写入0xffffffff,下一步可以就可以read到pci bar的大小，类型
     }
 
     u64 val = pci_config_readl(bdf, ofs); //这个读出来的是pci bar的大小，类型，prefetchable，is64bit这些信息
+    //olly_printf("===============================1 bdf=0x%x ofs=0x%x old=0x%x val=0x%llx\n", bdf, ofs, old, val);
     pci_config_writel(bdf, ofs, old);//写入bar的old值
+    //olly_printf("===============================2\n");
     if (is64) { //如果是64位地址类型，需要考虑到高32位的mask
 
         //hold == high old
@@ -814,9 +821,12 @@ pci_bios_get_bar(struct pci_device *pci, int bar,
         u32 high = pci_config_readl(bdf, ofs + 4);
         pci_config_writel(bdf, ofs + 4, hold);
         val |= ((u64)high << 32);
+    
         mask |= ((u64)0xffffffff << 32);
         *psize = (~(val & mask)) + 1;
     } else { //32位地址类型
+
+        
         *psize = ((~(val & mask)) + 1) & 0xffffffff;
     }
     *ptype = type;//确定mmio,pio, prefetchable
@@ -1009,12 +1019,13 @@ static int pci_bios_check_devices(struct pci_bus *busses)
             if ((pci->class == PCI_CLASS_BRIDGE_PCI) &&
                 (i >= PCI_BRIDGE_NUM_REGIONS && i < PCI_ROM_SLOT))
                 continue;
+
             int type, is64;
             u64 size;
-            olly_printf("1 pci_bios_check_devices\n");
+            olly_printf("   1 pci_bios_check_devices  bdf=0x%x i=0x%x\n", pci->bdf, i);
             //得到第i个bar pci_header.bars[i]的,mmio,pio,prefetchable， size,is64这些信息
             pci_bios_get_bar(pci, i, &type, &size, &is64);
-            olly_printf("2 pci_bios_check_devices\n");
+            olly_printf("   2 pci_bios_check_devices i =0x%x\n", i);
             if (size == 0)
                 continue;
 
@@ -1022,6 +1033,7 @@ static int pci_bios_check_devices(struct pci_bus *busses)
             if (type != PCI_REGION_TYPE_IO && size < PCI_DEVICE_MEM_MIN)
                 size = PCI_DEVICE_MEM_MIN;
 
+            //给这段bar描述的信息创建一个region对象
             struct pci_region_entry *entry = pci_region_create_entry(
                 bus, pci, i, size, size, type, is64);
             if (!entry)
@@ -1031,6 +1043,8 @@ static int pci_bios_check_devices(struct pci_bus *busses)
                 i++;
         }
     }
+
+    olly_printf("3 pci_bios_check_devices MaxPCIBus=0x%x\n", MaxPCIBus);
 
     // Propagate required bus resources to parent busses.
     int secondary_bus;
@@ -1127,6 +1141,17 @@ static int pci_bios_check_devices(struct pci_bus *busses)
  * BAR assignment
  ****************************************************************/
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_bios_map_devices() 
+ *         pci_bios_init_root_regions_io()
+ */
 // Setup region bases (given the regions' size and alignment)
 static int pci_bios_init_root_regions_io(struct pci_bus *bus)
 {
@@ -1142,6 +1167,7 @@ static int pci_bios_init_root_regions_io(struct pci_bus *bus)
      *   c000 - ffff    free, traditionally used for pci io
      */
     struct pci_region *r_io = &bus->r[PCI_REGION_TYPE_IO];
+    
     u64 sum = pci_region_sum(r_io);
     if (sum < 0x4000) {
         /* traditional region is big enougth, use it */
@@ -1157,6 +1183,17 @@ static int pci_bios_init_root_regions_io(struct pci_bus *bus)
     return 0;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_bios_map_devices()
+ *         pci_bios_init_root_regions_mem()
+ */
 static int pci_bios_init_root_regions_mem(struct pci_bus *bus)
 {
     struct pci_region *r_end = &bus->r[PCI_REGION_TYPE_PREFMEM];
@@ -1185,6 +1222,18 @@ static int pci_bios_init_root_regions_mem(struct pci_bus *bus)
 #define PCI_MEMORY_SHIFT        16
 #define PCI_PREF_MEMORY_SHIFT   16
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_bios_map_devices()
+ *         pci_region_map_entries()
+ *          pci_region_map_one_entry()
+ */ 
 static void
 pci_region_map_one_entry(struct pci_region_entry *entry, u64 addr)
 {
@@ -1194,6 +1243,7 @@ pci_region_map_one_entry(struct pci_region_entry *entry, u64 addr)
                 entry->dev,
                 entry->bar, addr, entry->size, region_type_name[entry->type]);
 
+        //去qemu设置bar的addr了
         pci_set_io_region_addr(entry->dev, entry->bar, addr, entry->is64);
         return;
     }
@@ -1218,6 +1268,17 @@ pci_region_map_one_entry(struct pci_region_entry *entry, u64 addr)
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_bios_map_devices()
+ *         pci_region_map_entries()
+ */ 
 static void pci_region_map_entries(struct pci_bus *busses, struct pci_region *r)
 {
     struct hlist_node *n;
@@ -1228,6 +1289,7 @@ static void pci_region_map_entries(struct pci_bus *busses, struct pci_region *r)
         if (entry->bar == -1)
             // Update bus base address if entry is a bridge region
             busses[entry->dev->secondary_bus].r[entry->type].base = addr;
+
         pci_region_map_one_entry(entry, addr);
         hlist_del(&entry->node);
         free(entry);
@@ -1246,10 +1308,10 @@ static void pci_region_map_entries(struct pci_bus *busses, struct pci_region *r)
  */ 
 static void pci_bios_map_devices(struct pci_bus *busses)
 {
-    if (pci_bios_init_root_regions_io(busses))
+    if (pci_bios_init_root_regions_io(busses))   // "PCI: IO"
         panic("PCI: out of I/O address space\n");
 
-    dprintf(1, "PCI: 32: %016llx - %016llx\n", pcimem_start, pcimem_end);
+    dprintf(1, "PCI: 32: %016llx - %016llx\n", pcimem_start, pcimem_end); 
 
     if (pci_bios_init_root_regions_mem(busses)) {
         struct pci_region r64_mem, r64_pref;
@@ -1343,6 +1405,8 @@ pci_setup(void)
 
     dprintf(1, "=== PCI new allocation pass #2 ===\n");
     pci_bios_map_devices(busses); // 设置PCI设备的mm空间和io空间
+
+    dprintf(1, "=== PCI new allocation    will call pci_bios_init_devices  ===\n");
 
     pci_bios_init_devices();
 
