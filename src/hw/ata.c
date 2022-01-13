@@ -923,6 +923,17 @@ ata_detect(void *data)
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      block_setup()
+ *       ata_setup()
+ *        ata_scan()
+ *         init_controller()
+ */ 
 // Initialize an ata controller and detect its drives.
 static void
 init_controller(struct pci_device *pci, int chanid, int irq
@@ -1015,6 +1026,17 @@ static const struct pci_device_id pci_ata_tbl[] = {
     PCI_DEVICE_END,
 };
 
+
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      block_setup()
+ *       ata_setup()
+ *        ata_scan()
+ */ 
 // Locate and init ata controllers.
 static void
 ata_scan(void)
@@ -1024,6 +1046,7 @@ ata_scan(void)
         // Try using ISA ports for ATA controllers.
         init_controller(NULL, 0, IRQ_ATA1
                         , PORT_ATA1_CMD_BASE, PORT_ATA1_CTRL_BASE, 0);
+
         init_controller(NULL, 1, IRQ_ATA2
                         , PORT_ATA2_CMD_BASE, PORT_ATA2_CTRL_BASE, 0);
         return;

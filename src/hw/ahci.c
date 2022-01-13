@@ -684,6 +684,7 @@ ahci_controller_setup(struct pci_device *pci)
     if (create_bounce_buf() < 0)
         return;
 
+    //设置 bar 5
     void *iobase = pci_enable_membar(pci, PCI_BASE_ADDRESS_5);
     if (!iobase)
         return;
@@ -700,6 +701,7 @@ ahci_controller_setup(struct pci_device *pci)
     dprintf(1, "AHCI controller at %pP, iobase %p, irq %d\n"
             , pci, ctrl->iobase, ctrl->irq);
 
+    //设置 PCI_COMMAND 的 PCI_COMMAND_MASTER
     pci_enable_busmaster(pci);
 
     val = ahci_ctrl_readl(ctrl, HOST_CTL);
