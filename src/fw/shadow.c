@@ -141,9 +141,6 @@ make_bios_writable(void)
     if (!CONFIG_QEMU || runningOnXen())
         return;
 
-
-
-
     dprintf(3, "enabling shadow ram\n");
     olly_printf("%s","2 --####--make_bios_writable -###- \n");
     // At this point, statically allocated variables can't be written,

@@ -154,11 +154,28 @@ int pci_init_device(const struct pci_device_id *ids
             (ids->devid == PCI_ANY_ID || ids->devid == pci->device) &&
             !((ids->class ^ pci->class) & ids->class_mask)) {
 
+            /*
+            * ich9_lpc_fadt_setup，
+            * ich9_smbus_setup
+            * mch_mem_addr_setup,
+            * piix4_fadt_setup,
+            * piix_isa_bridge_setup
+            * mch_isa_bridge_setup
+            * storage_ide_setup
+            * piix_ide_setup
+            * pic_ibm_setup
+            * piix4_pm_setup
+            * 
+            * apple_macio_setup
+            * intel_igd_setup
+            * i440fx_mem_addr_setup
+            * found_compatibleahci
+            */
             if (ids->func) // Q35:mch_mem_addr_setup,  [ src/fw/pciinit.c ]
                 ids->func(pci, arg);
             return 0;
         }
-        ids++;
+        ids++;//next
     }
     return -1;
 }
@@ -203,6 +220,18 @@ pci_enable_iobar(struct pci_device *pci, u32 addr)
     return bar;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     device_hardware_setup()
+ *      block_setup()
+ *       ahci_setup()
+ *        ahci_scan()
+ *         ahci_controller_setup()
+ *          pci_enable_membar()
+ */ 
 // Verify a memory bar and return it to the caller
 void *
 pci_enable_membar(struct pci_device *pci, u32 addr)
@@ -221,8 +250,10 @@ pci_enable_membar(struct pci_device *pci, u32 addr)
         }
     }
     bar &= PCI_BASE_ADDRESS_MEM_MASK;
+    //地址不在 [4M, 20M) 之内
     if (bar + 4*1024*1024 < 20*1024*1024) {
         // Bar doesn't look valid (it is in last 4M or first 16M)
+        olly_printf("pci_enable_membar bar=0x%x\n", bar);
         warn_internalerror();
         return NULL;
     }

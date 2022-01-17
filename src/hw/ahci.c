@@ -686,8 +686,10 @@ ahci_controller_setup(struct pci_device *pci)
 
     //设置 bar 5
     void *iobase = pci_enable_membar(pci, PCI_BASE_ADDRESS_5);
-    if (!iobase)
+    if (!iobase){
+        
         return;
+    }
 
     struct ahci_ctrl_s *ctrl = malloc_fseg(sizeof(*ctrl));
     if (!ctrl) {

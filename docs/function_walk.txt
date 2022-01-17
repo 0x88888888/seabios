@@ -55,6 +55,9 @@ handle_post()
                             pci_bios_init_bus() 建立总线上下级树
                             pci_probe_devices()  确定所有的pci设备
                             pci_bios_init_platform() 设置MCH
+                                pci_init_device(ids==pci_platform_tbl)()
+                                    mch_mmconfig_setup()   
+                                        pci_enable_mmconfig(Q35_HOST_BRIDGE_PCIEXBAR_ADDR==0xb0000000, "q35"); 这一步很重要，从此以后使用mmio的方式访问pci配置空间了
                             pci_bios_check_devices()
                             pci_bios_map_devices()
                             pci_bios_init_devices()

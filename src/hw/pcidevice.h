@@ -36,6 +36,23 @@ struct pci_device_id {
     u32 devid;
     u32 class;
     u32 class_mask;
+    /*
+     * ich9_lpc_fadt_setup，
+     * ich9_smbus_setup
+     * mch_mem_addr_setup,
+     * piix4_fadt_setup,
+     * piix_isa_bridge_setup
+     * mch_isa_bridge_setup
+     * storage_ide_setup
+     * piix_ide_setup
+     * pic_ibm_setup
+     * piix4_pm_setup
+     * 
+     * apple_macio_setup
+     * intel_igd_setup
+     * i440fx_mem_addr_setup
+     * found_compatibleahci
+     */
     void (*func)(struct pci_device *pci, void *arg);
 };
 

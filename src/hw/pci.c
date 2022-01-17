@@ -31,9 +31,14 @@ static u32 ioconfig_cmd(u16 bdf, u32 addr)
 
 void pci_config_writel(u16 bdf, u32 addr, u32 val)
 {
+
     if (!MODESEGMENT && mmconfig) {
+        if(bdf == 0x00f8) {
+            olly_printf("pci_config_writel: addr =0x%p  val=0x%x\n", mmconfig_addr(bdf, addr), val);
+        }
         writel(mmconfig_addr(bdf, addr), val);
     } else {
+
         //olly_printf("pci_config_writel port=0xcf8 bdf=0x%x ,addr=0x%x , ioconfig_cmd(bdf, addr)=0x%x\n", bdf, addr, ioconfig_cmd(bdf, addr));
         outl(ioconfig_cmd(bdf, addr), PORT_PCI_CMD);
         //olly_printf("pci_config_writel port=0xcfc val=0x%x \n", val);
@@ -55,6 +60,9 @@ void pci_config_writew(u16 bdf, u32 addr, u16 val)
 
 void pci_config_writeb(u16 bdf, u32 addr, u8 val)
 {
+    /*
+     * mmio的方式访问pci设备的配置空间
+     */
     if (!MODESEGMENT && mmconfig) {
         writeb(mmconfig_addr(bdf, addr), val);
     } else {
@@ -63,16 +71,20 @@ void pci_config_writeb(u16 bdf, u32 addr, u8 val)
     }
 }
 
+//pci_bios_get_bar
 u32 pci_config_readl(u16 bdf, u32 addr)
 {
     //olly_printf("%s","0 --------------####--------------pci_config_readl ----------###---------- \n");
     if (!MODESEGMENT && mmconfig) {
+        if(bdf == 0x00f8) {
+            olly_printf("pci_config_readl: addr =%p\n", mmconfig_addr(bdf, addr));
+        }
         return readl(mmconfig_addr(bdf, addr));
     } else {
         //olly_printf("pci_config_readl : out ioconfig_cmd(bdf, addr)=0x%x port=0x%x \n", ioconfig_cmd(bdf, addr), PORT_PCI_CMD);
-        outl(ioconfig_cmd(bdf, addr), PORT_PCI_CMD);
+        outl(ioconfig_cmd(bdf, addr), PORT_PCI_CMD); //0x0cf8
         //olly_printf("pci_config_readl : in port=0x%x \n", PORT_PCI_DATA);
-        return inl(PORT_PCI_DATA);
+        return inl(PORT_PCI_DATA);  //0x0cfc
     }
 }
 
@@ -110,12 +122,27 @@ pci_config_maskw(u16 bdf, u32 addr, u16 off, u16 on)
     pci_config_writew(bdf, addr, val);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_bios_init_platform()
+ *         pci_init_device(ids==pci_platform_tbl)
+ *          mch_mem_addr_setup()
+ *           pci_enable_mmconfig(Q35_HOST_BRIDGE_PCIEXBAR_ADDR==0xb0000000, "q35");
+ */ 
 void
 pci_enable_mmconfig(u64 addr, const char *name)
 {
     if (addr >= 0x100000000ll)
         return;
-    dprintf(1, "PCIe: using %s mmconfig at 0x%llx\n", name, addr);
+
+    olly_printf("\n\n\n\n PCIe: using %s mmconfig at 0x%llx\n\n\n\n", name, addr);    
+    //dprintf(1, "\n\n\n\n PCIe: using %s mmconfig at 0x%llx\n\n\n\n", name, addr);
     mmconfig = addr;
 }
 
@@ -162,8 +189,9 @@ pci_next(int bdf, int bus)
         if (pci_bdf_to_bus(bdf) != bus)
             return -1; //bdf得到的bus号不在当前讨论范围
 
-        //olly_printf("1 --####--pci_next --###-- bdf=0x%x bus=0x%x \n", bdf, bus);
+        olly_printf("1 --####--pci_next --###-- bdf=0x%x bus=0x%x \n", bdf, bus);
         u16 v = pci_config_readw(bdf, PCI_VENDOR_ID);
+        olly_printf("PCI_VENDOR_ID = 0x%x\n", v);
         if (v != 0x0000 && v != 0xffff)
             // Device is present.
             return bdf;

@@ -50,10 +50,10 @@ i8042_wait_write(void)
         u8 status = inb(PORT_PS2_STATUS);
         //olly_printf("1----------i8042_wait_write status=%x\n", status);
         if (! (status & I8042_STR_IBF)){
-            olly_printf(" -i8042_wait_write status=%x    OK\n", status);
+            //olly_printf(" -i8042_wait_write status=%x    OK\n", status);
             return 0;
         }
-        olly_printf(" --i8042_wait_write status=%x\n   failed", status);
+        //olly_printf(" --i8042_wait_write status=%x\n   failed", status);
         udelay(50);
     }
    // olly_printf("3----------i8042_wait_write status=%x\n", status);
@@ -359,9 +359,9 @@ __ps2_command(int aux, int command, u8 *param)
         }
     } else {//0x00f4
         // Send command.
-        olly_printf("------------1--------------------------------------ps2\n");
+        //olly_printf("------------1--------------------------------------ps2\n");
         ret = ps2_sendbyte(aux, command, 200);
-        olly_printf("------2--------------------------------------------ps2\n");
+        //olly_printf("------2--------------------------------------------ps2\n");
         if (ret)
             goto fail;
 
