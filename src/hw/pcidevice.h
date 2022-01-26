@@ -14,6 +14,10 @@ struct pci_device {
     u16 vendor, device;
     u16 class;
     u8 prog_if, revision;
+    /* 
+     * bridge : 1
+     * end point : 0
+     */
     u8 header_type;
     u8 secondary_bus;
 

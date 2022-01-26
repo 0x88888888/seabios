@@ -46,14 +46,16 @@ static const char *region_type_name[] = {
     [ PCI_REGION_TYPE_PREFMEM ] = "prefmem",
 };
 
-u64 pcimem_start   = BUILD_PCIMEM_START;
-u64 pcimem_end     = BUILD_PCIMEM_END;
-u64 pcimem64_start = BUILD_PCIMEM64_START;
-u64 pcimem64_end   = BUILD_PCIMEM64_END;
+u64 pcimem_start   = BUILD_PCIMEM_START; /* 0xe000 0000 */
+u64 pcimem_end     = BUILD_PCIMEM_END;   /* 0xfec0 0000 */
+
+u64 pcimem64_start = BUILD_PCIMEM64_START; /* 0x80 0000 0000ULL */
+u64 pcimem64_end   = BUILD_PCIMEM64_END;   /* 0x100 0000 0000ULL */
 u64 pci_io_low_end = 0xa000;
 
 struct pci_region_entry {
     struct pci_device *dev;
+    //存放bar index
     int bar;
     u64 size;
     u64 align;
@@ -70,7 +72,7 @@ struct pci_region {
 
 struct pci_bus {
     struct pci_region r[PCI_REGION_TYPE_COUNT];
-    struct pci_device *bus_dev;
+    struct pci_device *bus_dev;  /* BUS设备 */
 };
 
 /*
@@ -79,14 +81,19 @@ struct pci_bus {
 static u32 pci_bar(struct pci_device *pci, int region_num)
 {
     if (region_num != PCI_ROM_SLOT /* 6*/) {
-        return PCI_BASE_ADDRESS_0 + region_num * 4;
+        return PCI_BASE_ADDRESS_0 + region_num * 4; /* 得到bar在pcie配置空间中的 pci offset */
     }
 
 #define PCI_HEADER_TYPE_MULTI_FUNCTION 0x80
     u8 type = pci->header_type & ~PCI_HEADER_TYPE_MULTI_FUNCTION; //去掉 multi function标记
 
-    //得到bar在
-    return type == PCI_HEADER_TYPE_BRIDGE ? PCI_ROM_ADDRESS1 : PCI_ROM_ADDRESS;
+    /* 
+     * 得到rom bar的pcie offset
+     * 0x38[PCI_ROM_ADDRESS1] (bridge pci设备配置空间时)
+     * 0x30[PCI_ROM_ADDRESS] (normal pci设备配置空间时)
+     * 
+     */
+    return type == PCI_HEADER_TYPE_BRIDGE ? PCI_ROM_ADDRESS1 : PCI_ROM_ADDRESS  ; 
 }
 
 /*
@@ -98,7 +105,7 @@ pci_set_io_region_addr(struct pci_device *pci, int bar, u64 addr, int is64)
 {
     u32 ofs = pci_bar(pci, bar);
     pci_config_writel(pci->bdf, ofs, addr);
-    if (is64)
+    if (is64)//写高32bits
         pci_config_writel(pci->bdf, ofs + 4, addr >> 32);
 }
 
@@ -428,6 +435,7 @@ static void pci_bios_init_device(struct pci_device *pci)
 
     /* map the interrupt */
     u16 bdf = pci->bdf;
+    //设置中断号信息
     int pin = pci_config_readb(bdf, PCI_INTERRUPT_PIN);
     if (pin != 0)
         pci_config_writeb(bdf, PCI_INTERRUPT_LINE, pci_slot_get_irq(pci, pin));
@@ -437,8 +445,9 @@ static void pci_bios_init_device(struct pci_device *pci)
     /* enable memory mappings */
     pci_config_maskw(bdf, PCI_COMMAND, 0,
                      PCI_COMMAND_IO | PCI_COMMAND_MEMORY | PCI_COMMAND_SERR);
+
     /* enable SERR# for forwarding */
-    if (pci->header_type & PCI_HEADER_TYPE_BRIDGE)
+    if (pci->header_type & PCI_HEADER_TYPE_BRIDGE)//bridge设备
         pci_config_maskw(bdf, PCI_BRIDGE_CONTROL, 0,
                          PCI_BRIDGE_CTL_SERR);
 }
@@ -534,21 +543,25 @@ static void i440fx_mem_addr_setup(struct pci_device *dev, void *arg)
  *        pci_bios_init_platform()
  *         pci_init_device(ids==pci_platform_tbl)
  *          mch_mem_addr_setup()
+ *           mch_mmconfig_setup()
  */ 
 static void mch_mmconfig_setup(u16 bdf)
 {
     u64 addr = Q35_HOST_BRIDGE_PCIEXBAR_ADDR;
-    u32 upper = addr >> 32;
-    u32 lower = (addr & 0xffffffff) | Q35_HOST_BRIDGE_PCIEXBAREN;
+    u32 upper = addr >> 32;//高32位，都是0
+    u32 lower = (addr & 0xffffffff) | Q35_HOST_BRIDGE_PCIEXBAREN; /* 最低位设置为1,结果为0xb0000001 */
 
     //去设置PCIEXBAR的mmio的 地址
-    pci_config_writel(bdf, Q35_HOST_BRIDGE_PCIEXBAR, 0);  /*  0x60处*/
-    pci_config_writel(bdf, Q35_HOST_BRIDGE_PCIEXBAR + 4, upper);
-    pci_config_writel(bdf, Q35_HOST_BRIDGE_PCIEXBAR, lower);
+    pci_config_writel(bdf, Q35_HOST_BRIDGE_PCIEXBAR /* 0x60 */, 0);  /*  0x60处*/
+    pci_config_writel(bdf, Q35_HOST_BRIDGE_PCIEXBAR + 4 /* 0x64 */, upper);
+    pci_config_writel(bdf, Q35_HOST_BRIDGE_PCIEXBAR /* 0x60 */, lower);
 
     olly_printf("\n\n\n\n\n:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::\n\n\n\n\n");
-    //这里进去以后，从此以后就通过mmio方式访问pci配置空间了
+    /*
+     * 这里进去以后， 设置好全局变量 mmconfig，从此以后就通过mmio方式访问pci配置空间了
+     */
     pci_enable_mmconfig(Q35_HOST_BRIDGE_PCIEXBAR_ADDR, "q35");
+    olly_printf("\n\n\n\n\n:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::\n\n\n\n\n");
 }
 
 /*
@@ -565,8 +578,8 @@ static void mch_mmconfig_setup(u16 bdf)
  */ 
 static void mch_mem_addr_setup(struct pci_device *dev, void *arg)
 {
-    u64 addr = Q35_HOST_BRIDGE_PCIEXBAR_ADDR;
-    u32 size = Q35_HOST_BRIDGE_PCIEXBAR_SIZE;
+    u64 addr = Q35_HOST_BRIDGE_PCIEXBAR_ADDR;  /* 0xb0000000 */
+    u32 size = Q35_HOST_BRIDGE_PCIEXBAR_SIZE;  /* 256M */
 
     /* setup mmconfig */
     MCHMmcfgBDF = dev->bdf;
@@ -574,7 +587,7 @@ static void mch_mem_addr_setup(struct pci_device *dev, void *arg)
     olly_printf("\n-------------------------mch_mem_addr_setup-------------------------\n");
 
     mch_mmconfig_setup(dev->bdf); //这一步之后，就使用mmio访问pcie配置空间了
-    e820_add(addr, size, E820_RESERVED); /* [0xb0000000--  0xc0000000) 这段空间作为pcie的配置空间*/
+    e820_add(addr, size, E820_RESERVED); /* [0xb0000000--  0xc0000000) 这段空间作为pcie的配置空间 */
 
     /* setup pci i/o window (above mmconfig) */
     pcimem_start = addr + size;
@@ -688,7 +701,7 @@ pci_bios_init_bus_rec(int bus, u8 *pci_bus)
         class = pci_config_readw(bdf, PCI_CLASS_DEVICE);
         if (class == PCI_CLASS_BRIDGE_PCI) { //pci桥设备
             pci_config_writeb(bdf, PCI_SECONDARY_BUS, 255);
-            pci_config_writeb(bdf, PCI_SUBORDINATE_BUS, 0);
+            pci_config_writeb(bdf, PCI_SUBORDINATE_BUS, 0);//
         }
     }
 
@@ -700,7 +713,7 @@ pci_bios_init_bus_rec(int bus, u8 *pci_bus)
         }
         dprintf(1, "PCI: %s bdf = 0x%x\n", __func__, bdf);
 
-        u8 pribus = pci_config_readb(bdf, PCI_PRIMARY_BUS);
+        u8 pribus = pci_config_readb(bdf, PCI_PRIMARY_BUS); //上游bus号
         if (pribus != bus) {
             dprintf(1, "PCI: primary bus = 0x%x -> 0x%x\n", pribus, bus);
             pci_config_writeb(bdf, PCI_PRIMARY_BUS, bus);
@@ -724,7 +737,7 @@ pci_bios_init_bus_rec(int bus, u8 *pci_bus)
         u8 subbus = pci_config_readb(bdf, PCI_SUBORDINATE_BUS);
         pci_config_writeb(bdf, PCI_SUBORDINATE_BUS, 255);
 
-        //子总线
+        //递归，得到下级的所有的bridge设备
         pci_bios_init_bus_rec(secbus, pci_bus);
 
         if (subbus != *pci_bus) {
@@ -813,7 +826,7 @@ pci_bios_get_bar(struct pci_device *pci, int bar,
     u32 ofs = pci_bar(pci, bar); //得到第region_num个pci bar在配置空间中的偏移
     u16 bdf = pci->bdf;
     u32 old = pci_config_readl(bdf, ofs); // 去读出这个bar的信息
-    if(pci->bdf==0x00f8) {
+    if(pci->bdf==0x00f8 || pci->bdf == 0x00) {
         olly_printf("0 -------------------------------pci_bios_get_bar bar=0x%x old=0x%x ofs=0x%x\n", bar, old, ofs);
     }
     int is64 = 0, type = PCI_REGION_TYPE_MEM;
@@ -821,7 +834,10 @@ pci_bios_get_bar(struct pci_device *pci, int bar,
 
     if (bar == PCI_ROM_SLOT /* 6*/) {
         mask = PCI_ROM_ADDRESS_MASK; /* ~0x07fful  ==0xfffff800 */
-        pci_config_writel(bdf, ofs, mask);
+        /*
+         * 将0xfffff800 写入到 pcie config space的  pci_header.rom_bar( 	Expansion ROM base address  )处
+         */
+        pci_config_writel(bdf, ofs, mask); 
         //olly_printf("===============================pci_bios_get_bar  bdf=0x%x bar=0x%x\n", pci->bdf, bar);
     } else {
         if (old & PCI_BASE_ADDRESS_SPACE_IO) { //bit 0, io空间类型的bar
@@ -868,10 +884,11 @@ pci_bios_get_bar(struct pci_device *pci, int bar,
     *ptype = type;//确定mmio,pio, prefetchable
     *pis64 = is64;
 
-    if(pci->bdf==0x00f8) {
-        olly_printf("3 -------------------------------pci_bios_get_bar bar=0x%x  val=0x%llx old=0x%x\n",bar, val, old);
-    }  
+ 
 
+    if (bar == PCI_ROM_SLOT /* 6*/){
+        olly_printf("3 ----------------------------------------------pci_bios_get_bar bar=0x%x  val=0x%llx old=0x%x  psize=0x%llx ptype=0x%x pis64=0x%x \n",bar, val, old, *psize, *ptype, *pis64);
+    }
 }
 
 static int pci_bios_bridge_region_is64(struct pci_region *r,
@@ -1068,7 +1085,7 @@ static int pci_bios_check_devices(struct pci_bus *busses)
             pci_bios_get_bar(pci, i, &type, &size, &is64);
             olly_printf("   2 pci_bios_check_devices i =0x%x\n", i);
             if (size == 0)
-                continue;
+                continue; //设备不使用这个bar
 
             //size最小一个page 4096字节
             if (type != PCI_REGION_TYPE_IO && size < PCI_DEVICE_MEM_MIN)
@@ -1076,7 +1093,7 @@ static int pci_bios_check_devices(struct pci_bus *busses)
 
             //给这段bar描述的信息创建一个region对象
             struct pci_region_entry *entry = pci_region_create_entry(
-                bus, pci, i, size, size, type, is64);
+                bus, pci, i /* bar index */, size, size, type, is64);
             if (!entry)
                 return -1;
 
@@ -1238,6 +1255,7 @@ static int pci_bios_init_root_regions_io(struct pci_bus *bus)
 static int pci_bios_init_root_regions_mem(struct pci_bus *bus)
 {
     struct pci_region *r_end = &bus->r[PCI_REGION_TYPE_PREFMEM];
+    //这个bus负责的这段物理地址
     struct pci_region *r_start = &bus->r[PCI_REGION_TYPE_MEM];
 
     if (pci_region_align(r_start) < pci_region_align(r_end)) {
@@ -1256,6 +1274,7 @@ static int pci_bios_init_root_regions_mem(struct pci_bus *bus)
          (r_start->base > pcimem_end))
         // Memory range requested is larger than available.
         return -1;
+
     return 0;
 }
 
@@ -1297,6 +1316,7 @@ pci_region_map_one_entry(struct pci_region_entry *entry, u64 addr)
         pci_config_writeb(bdf, PCI_IO_LIMIT, limit >> PCI_IO_SHIFT);
         pci_config_writew(bdf, PCI_IO_LIMIT_UPPER16, 0);
     }
+
     if (entry->type == PCI_REGION_TYPE_MEM) {
         pci_config_writew(bdf, PCI_MEMORY_BASE, addr >> PCI_MEMORY_SHIFT);
         pci_config_writew(bdf, PCI_MEMORY_LIMIT, limit >> PCI_MEMORY_SHIFT);
@@ -1396,6 +1416,7 @@ static void pci_bios_map_devices(struct pci_bus *busses)
     for (bus = 0; bus<=MaxPCIBus; bus++) {
         int type;
         for (type = 0; type < PCI_REGION_TYPE_COUNT; type++)
+            //给设备分配 物理地址
             pci_region_map_entries(busses, &busses[bus].r[type]);
     }
 }
@@ -1426,14 +1447,14 @@ pci_setup(void)
         return;
     }
 
-    pci_bios_init_bus(); //遍历pci总线树
+    pci_bios_init_bus(); //遍历pci桥设备，确定bridge设备管理上游bus，下游bus
 
     dprintf(1, "========================= PCI device probing ================================================\n");
-    pci_probe_devices(); //确定所有的pci设备
+    pci_probe_devices(); //确定所有的pci设备,添加到PCIDevices链表
 
     dprintf(1, "========================= PCI device probing  end================================================\n");
 
-    pcimem_start = RamSize;
+    pcimem_start = RamSize; /* 从DRMA结束处，开始作为pcie设备bar的cpu域的物理地址 */
     pci_bios_init_platform(); //设置mch的，这个函数结束后，seabios改用mmio的访问pcie配置空间
 
     dprintf(1, "=== PCI new allocation pass #1 ===\n");
@@ -1443,11 +1464,19 @@ pci_setup(void)
         return;
     }
     memset(busses, 0, sizeof(*busses) * (MaxPCIBus + 1));
+    /*
+     * 1. 从设备得到 pcie 配置空间中的bar信息(主要是size, is64,prefetchable)
+     * 2. 根据这些 bar信息，建立pci_region_entry信息
+     */
     if (pci_bios_check_devices(busses))
         return;
 
     dprintf(1, "=== PCI new allocation pass #2 ===\n");
-    pci_bios_map_devices(busses); // 设置PCI设备的mm空间和io空间
+    /*
+     * 根据上一步建立的pci_region_entry信息，
+     * 给这些设备分配cpu域物理地址
+     */
+    pci_bios_map_devices(busses); 
 
     dprintf(1, "=== PCI new allocation    will call pci_bios_init_devices  ===\n");
 

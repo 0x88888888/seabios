@@ -5,14 +5,22 @@ handle_post()
     debug_banner()
     xen_preinit()
     make_bios_writable()   通过PAM来设置 [ 0xc0000-0x100000 ]这段区间writable
+        遍历0号bus的bdf，确定Q35机型
     dopost()
         code_mutable_preinit
+            rtc_write(CMOS_RESET_CODE, 0) ,去 reset  rtc
         qemu_preinit()
             qemu_detect()
                 qemu_debug_preinit()
                 pci_config_readw(bdf==0, PCI_VENDOR_ID)  通过bdf=0 ，vmm返回给seabios的结果来提示 用户运行在哪个机型上
             kvm_detect()
                 cpuid值令, vmm返回，提示信息vmm是否运行在 kvm之上
+            qemu_early_e820()
+                qemu_cfg_detect()
+                    写0x510
+                    读0x511
+                qemu_cfg_read_entry(&count, QEMU_CFG_FILE_DIR, sizeof(count))
+                构建e820内存信息
             e820_add(0xfffc0000, 256*1024, E820_RESERVED);  4G的最高的这一部分留给bios
         coreboot_preinit
         malloc_preinit
@@ -52,14 +60,27 @@ handle_post()
                         kvmclock_init()
                         pci_setup()        建立pci设备树
                             pci_probe_host()  找到bdf==0，这个MCH,相当与pci host或则RC
-                            pci_bios_init_bus() 建立总线上下级树
+                                1. outl(0x80000000, 0x0cf8)
+                                2. inl(0x0cf8) == 0x80000000 ,说明PCI系统可以使用
+                            pci_bios_init_bus() 遍历出所有的bridge设备
+                                pci_bios_init_bus_rec(0 , &pci_bus)
+
                             pci_probe_devices()  确定所有的pci设备
+                            pcimem_start = RamSize;  从DRMA结束处，开始作为pcie设备bar的cpu域的物理地址 
                             pci_bios_init_platform() 设置MCH
                                 pci_init_device(ids==pci_platform_tbl)()
-                                    mch_mmconfig_setup()   
-                                        pci_enable_mmconfig(Q35_HOST_BRIDGE_PCIEXBAR_ADDR==0xb0000000, "q35"); 这一步很重要，从此以后使用mmio的方式访问pci配置空间了
+                                    mch_mem_addr_setup()
+                                        mch_mmconfig_setup()   
+                                            pci_enable_mmconfig(Q35_HOST_BRIDGE_PCIEXBAR_ADDR==0xb0000000, "q35"); 这一步很重要，从此以后使用mmio的方式访问pci配置空间了
+                                        pcimem_start = addr + size 重新设置了pcimem_start，这个值在 0xb0000000 + 256M处，也就是0xc0000000
+                                        pci_slot_get_irq = mch_pci_slot_get_irq            
                             pci_bios_check_devices()
+                                pci_bios_get_bar() 从设备处得到设备bar的size, prefetchable, is64等信息
+
                             pci_bios_map_devices()
+                                pci_region_map_entries()  
+                                    pci_region_map_one_entry() 这里给cpu分配物理地址
+                                        pci_set_io_region_addr() 调用pci_config_writel()将物理地址写入设备的设备pcie配置bar
                             pci_bios_init_devices()
                             pci_enable_default_vga()
                         smm_device_setup()

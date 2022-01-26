@@ -146,6 +146,7 @@ make_bios_writable(void)
     // At this point, statically allocated variables can't be written,
     // so do this search manually.
     int bdf;
+    
     //遍历0号bus上所有的bdf,得到I440FX_PAM0或者q35机型就退出
     foreachbdf(bdf, 0) {
         olly_printf("%s","3 -####-make_bios_writable -###- \n");
@@ -175,6 +176,8 @@ make_bios_writable(void)
             return;
         }
     }
+    
+    
     olly_printf("%s","5 --####--make_bios_writable --###-- \n");
     dprintf(1, "Unable to unlock ram - bridge not found\n");
 }

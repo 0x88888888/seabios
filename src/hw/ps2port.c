@@ -25,6 +25,9 @@
 
 #define I8042_BUFFER_SIZE       16
 
+/*
+ * guest等待设备 out buffer空闲
+ */
 static int
 i8042_wait_read(void)
 {
@@ -40,6 +43,9 @@ i8042_wait_read(void)
     return -1;
 }
 
+/*
+ * guest等待设备 input buffer 空闲
+ */
 static int
 i8042_wait_write(void)
 {
@@ -71,6 +77,8 @@ i8042_wait_write(void)
  *      ps2port_setup()
  *       ps2_keyboard_setup()
  *        i8042_flush()
+ * 
+ * guest将设备中的数据都读取处俩，丢弃
  */ 
 static int
 i8042_flush(void)
@@ -125,22 +133,22 @@ __i8042_command(int command, u8 *param)
     //如果有数据要发送，就还有发送数据到0x60数据端口
     for (i = 0; i < send; i++) {
         
-        ret = i8042_wait_write();
+        ret = i8042_wait_write(); //等待设备的 input buffer 可写
         
         if (ret)
             return ret;
-        outb(param[i], PORT_PS2_DATA);
+        outb(param[i], PORT_PS2_DATA); //guest写数据到设备的input buffer
     }
     
 
     // Receive parameters (if any).
     //发送命令后，如果需要从设备接收数据，从0x60数据端口接收数据
     for (i = 0; i < receive; i++) {
-        ret = i8042_wait_read();
+        ret = i8042_wait_read(); //guest 等待设备的output buffer 由数据
         if (ret){
             return ret;
         }
-        param[i] = inb(PORT_PS2_DATA);
+        param[i] = inb(PORT_PS2_DATA);  //guest将设备output buffer中的数据读进来
         dprintf(7, "i8042 param=%x\n", param[i]);
     }
     return 0;
@@ -158,6 +166,10 @@ __i8042_command(int command, u8 *param)
  * 
  * __ps2_command()
  *  i8042_command()
+ * 
+ * 去执行command， 将param[i]中的数据发送出去，或者结束数据到param[i]
+ * 
+ * command的低8bits为 ps2 controller的命令，高8bits为send和receive的次数
  */ 
 static int
 i8042_command(int command, u8 *param)
@@ -169,6 +181,9 @@ i8042_command(int command, u8 *param)
     return ret;
 }
 
+/*
+ * 将c写到ps2 controller的 input buffer
+ */
 static int
 i8042_kbd_write(u8 c)
 {
@@ -194,6 +209,7 @@ i8042_reboot(void)
     for (i=0; i<10; i++) {
         i8042_wait_write();
         udelay(50);
+        //guest给ps2 controller发送 reset命令
         outb(0xfe, PORT_PS2_STATUS); /* pulse reset low */
         udelay(50);
     }
@@ -207,20 +223,26 @@ i8042_reboot(void)
 #define PS2_RET_ACK             0xfa
 #define PS2_RET_NAK             0xfe
 
+/*
+ *
+ * 从ps2 controller读取一个byte
+ */
 static int
 ps2_recvbyte(int aux, int needack, int timeout)
 {
     u32 end = timer_calc(timeout);
     for (;;) {
+        //先得到ps2 contrller的状态
         u8 status = inb(PORT_PS2_STATUS); //0x0064
 
-        if (status & I8042_STR_OBF) { //0x01
+        if (status & I8042_STR_OBF) { //0x01,检查ps2 controller的out buffer是否有数据，如果有数据，guest就可以读取过来
             u8 data = inb(PORT_PS2_DATA); //0x0060
             dprintf(7, "ps2 read %x\n", data);
 
             if (!!(status & I8042_STR_AUXDATA) == aux) {
-                if (!needack)
+                if (!needack) //如果不需要needack,就直接返回data了
                     return data;
+
                 if (data == PS2_RET_ACK) //0xfa
                     return data;
                 if (data == PS2_RET_NAK) { //0xfe
@@ -241,6 +263,10 @@ ps2_recvbyte(int aux, int needack, int timeout)
     }
 }
 
+/*
+ *
+ * guest发送一个byte到设备
+ */
 static int
 ps2_sendbyte(int aux, u8 command, int timeout)
 {
@@ -258,6 +284,7 @@ ps2_sendbyte(int aux, u8 command, int timeout)
     ret = ps2_recvbyte(aux, 1, timeout);
     if (ret < 0)
         return ret;
+
     if (ret != PS2_RET_ACK)
         return -1;
 
@@ -293,7 +320,7 @@ __ps2_command(int aux, int command, u8 *param)
                  & ~(I8042_CTR_KBDINT/*bit 0*/|I8042_CTR_AUXINT /* bit 1 */));
 
     dprintf(6, "i8042 ctr old=%x new=%x\n", ps2ctr, newctr);
-    //通过0x64端口的0x60命令 将nectrl out到 qemu的ps2 controller.
+    //通过0x64端口的0x60命令 将newctrl out到 qemu的ps2 controller.
     int ret = i8042_command(I8042_CMD_CTL_WCTR, &newctr);//0x60
     if (ret) //前一步，必须要返回0
         return ret;
@@ -401,6 +428,10 @@ fail:
  * ps2_keyboard_setup()
  *  ps2_kbd_command() 0x01ff  , 0x00f5
  *   ps2_command(aux=0, command =0x01ff,0x00f5 )
+ * 
+ * mouse_command() [src/mouse.c]
+ *  ps2_mouse_command()
+ *   ps2_command(aux = 1)
  */
 static int
 ps2_command(int aux, int command, u8 *param)
@@ -431,6 +462,10 @@ ps2_kbd_command(int command, u8 *param)
     return ps2_command(0, command, param);
 }
 
+/*
+ * mouse_command() [src/mouse.c]
+ *  ps2_mouse_command()
+ */
 int
 ps2_mouse_command(int command, u8 *param)
 {
@@ -440,7 +475,8 @@ ps2_mouse_command(int command, u8 *param)
     // Update ps2ctr for mouse enable/disable.
     if (command == PSMOUSE_CMD_ENABLE || command == PSMOUSE_CMD_DISABLE) {
         u8 ps2ctr = GET_LOW(Ps2ctr);
-        if (command == PSMOUSE_CMD_ENABLE)
+
+        if (command == PSMOUSE_CMD_ENABLE) 
             ps2ctr = ((ps2ctr | (CONFIG_HARDWARE_IRQ ? I8042_CTR_AUXINT : 0))
                       & ~I8042_CTR_AUXDIS);
         else

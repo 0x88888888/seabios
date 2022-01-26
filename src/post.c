@@ -405,10 +405,12 @@ void VISIBLE32INIT
 dopost(void)
 {
     olly_printf("0----------------in dopost----------------------------\n");
+
     code_mutable_preinit();
     olly_printf("1----------------in dopost----------------------------\n");
     // Detect ram and setup internal malloc.
     qemu_preinit(); //确定QEMU模拟的机型,Q35, i440fx之类的
+    outb('a', 0x786);
     olly_printf("2----------------in dopost----------------------------\n");
     coreboot_preinit(); //没有配置CONFIG_COREBOOT，直接返回了
     olly_printf("3----------------in dopost----------------------------\n");
@@ -425,7 +427,8 @@ dopost(void)
 void VISIBLE32FLAT
 handle_post(void)
 {
-    olly_printf("%s","0 --------------####--------------handle_post ----------###---------- \n");
+    
+    olly_printf("%s","0 @@@@@@@@@@@@@@@@@@--------------####--------------handle_post ----------###---------- \n");
     if (!CONFIG_QEMU && !CONFIG_COREBOOT)
         return;
 
@@ -440,7 +443,9 @@ handle_post(void)
     
     //通过PAM来设置 [ 0xc0000-0x100000 ]这段区间writable
     make_bios_writable();
+    
     olly_printf("%s","x --------------####--------------handle_post ----------###---------- \n");
     // Now that memory is read/writable - start post process.
+    
     dopost();
 }

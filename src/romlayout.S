@@ -595,6 +595,9 @@ entry_18:
 entry_post:
         cmpl $0, %cs:HaveRunPost                // Check for resume/reboot
         jnz entry_resume
+        /*
+         * 跳转到 post.c中的 handle_post
+         */
         ENTRY_INTO32 _cfunc32flat_handle_post   // Normal entry point
 
         ORG 0xe2c3

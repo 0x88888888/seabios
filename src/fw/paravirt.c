@@ -140,20 +140,26 @@ static void qemu_detect(void)
 
     // Setup QEMU debug output port
     olly_printf("0----------qemu_detect\n");
+    
     qemu_debug_preinit();
+    
     olly_printf("1----------qemu_detect\n");
 
     // check northbridge @ 00:00.0
-    u16 v = pci_config_readw(0, PCI_VENDOR_ID);
+    u16 v = pci_config_readw(0, PCI_VENDOR_ID);//0x00
     olly_printf("2----------qemu_detect v=0x%x\n",v);
     if (v == 0x0000 || v == 0xffff)
         return;
-    u16 d = pci_config_readw(0, PCI_DEVICE_ID);
-    olly_printf("3----------qemu_detect d=0x%x  \n", d);
-    u16 sv = pci_config_readw(0, PCI_SUBSYSTEM_VENDOR_ID);
-    olly_printf("4----------qemu_detect sv=0x%x  \n", sv);
-    u16 sd = pci_config_readw(0, PCI_SUBSYSTEM_ID);
 
+    u16 d = pci_config_readw(0, PCI_DEVICE_ID); //0x02
+     
+    olly_printf("3----------qemu_detect d=0x%x  \n", d);
+    u16 sv = pci_config_readw(0, PCI_SUBSYSTEM_VENDOR_ID);//0x2c
+    olly_printf("4----------qemu_detect sv=0x%x  \n", sv);
+//outb('b', 0x86);    
+    u16 sd = pci_config_readw(0, PCI_SUBSYSTEM_ID);//0x2e
+
+ 
     olly_printf("5----------qemu_detect v=0x%x d=0x%x sv=0x%x sd=0x%x \n",v, d, sv , sd);
     if (sv != 0x1af4 || /* Red Hat, Inc */
         sd != 0x1100)   /* Qemu virtual machine */
@@ -171,6 +177,7 @@ static void qemu_detect(void)
         dprintf(1, "Running on QEMU (unknown nb: %04x:%04x)\n", v, d);
         break;
     }
+
 }
 
 static int qemu_early_e820(void);
@@ -185,8 +192,10 @@ qemu_preinit(void)
 {
     olly_printf("0........qemu_preinit\n");
     qemu_detect();
+    
     olly_printf("1........qemu_preinit\n");
     kvm_detect();
+    
     olly_printf("2........qemu_preinit\n");
 
     if (!CONFIG_QEMU)
@@ -214,7 +223,7 @@ qemu_preinit(void)
         e820_add(0, rs, E820_RAM);
         dprintf(1, "RamSize: 0x%08x [cmos]\n", RamSize);
     }
-
+outb('a', 0x9877);
      olly_printf("8........qemu_preinit\n");
     /* reserve 256KB BIOS area at the end of 4 GB */
     e820_add(0xfffc0000, 256*1024, E820_RESERVED);
@@ -335,6 +344,12 @@ qemu_cfg_select(u16 f)
     outw(f, PORT_QEMU_CFG_CTL);
 }
 
+/*
+ * qemu_cfg_read_entry()
+ *  qemu_cfg_dma_transfer()
+ * 
+ * address高16bits为selector，低16bits为DMA操作的控制参数
+ */
 static void
 qemu_cfg_dma_transfer(void *address, u32 length, u32 control)
 {
@@ -351,6 +366,7 @@ qemu_cfg_dma_transfer(void *address, u32 length, u32 control)
     while(be32_to_cpu(access.control) & ~QEMU_CFG_DMA_CTL_ERROR) {
         yield();
     }
+    
 }
 
 static void
@@ -396,16 +412,25 @@ qemu_cfg_skip(int len)
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   qemu_preinit()
+ *    qemu_early_e820()
+ *     qemu_cfg_detect()
+ *      qemu_cfg_read_entry(, e ==QEMU_CFG_ID ==0x01)
+ */
 static void
 qemu_cfg_read_entry(void *buf, int e, int len)
 {
     if (qemu_cfg_dma_enabled()) {
+        //高16bit为 selector
         u32 control = (e << 16) | QEMU_CFG_DMA_CTL_SELECT
                         | QEMU_CFG_DMA_CTL_READ;
         qemu_cfg_dma_transfer(buf, len, control);
     } else {
-        qemu_cfg_select(e);
-        qemu_cfg_read(buf, len);
+        qemu_cfg_select(e);  //向0x510写入e
+        qemu_cfg_read(buf, len); //从0x511读取到buf
     }
 }
 
@@ -670,12 +695,12 @@ static int qemu_cfg_detect(void)
 
     // Detect fw_cfg interface.
     olly_printf("0----------qemu_cfg_detect\n");
-    qemu_cfg_select(QEMU_CFG_SIGNATURE);
+    qemu_cfg_select(QEMU_CFG_SIGNATURE);  //向0x510端口写入全0
     olly_printf("1----------qemu_cfg_detect\n");
     char *sig = "QEMU";
     int i;
     for (i = 0; i < 4; i++)
-        if (inb(PORT_QEMU_CFG_DATA) != sig[i])
+        if (inb(PORT_QEMU_CFG_DATA) != sig[i]) /* 从端口0x510读取 */
             return 0;
 
     dprintf(1, "Found QEMU fw_cfg\n");
@@ -684,7 +709,7 @@ static int qemu_cfg_detect(void)
     // Detect DMA interface.
     u32 id;
     qemu_cfg_read_entry(&id, QEMU_CFG_ID, sizeof(id));
-
+ 
     //是否支持DMA
     if (id & QEMU_CFG_VERSION_DMA) {
         dprintf(1, "QEMU fw_cfg DMA interface supported\n");
@@ -745,6 +770,8 @@ void qemu_cfg_init(void)
  *   qemu_preinit()
  *    qemu_early_e820()
  *
+ * 构建e820表
+ * 
  * This runs before malloc and romfile are ready, so we have to work
  * with stack allocations and read from fw_cfg in chunks.
  */
@@ -755,11 +782,14 @@ static int qemu_early_e820(void)
     u32 select = 0, size = 0;
     u32 count, i;
 
-    if (!qemu_cfg_detect())
+    if (!qemu_cfg_detect()){
         return 0;
+    }
+    
 
     // find e820 table
     qemu_cfg_read_entry(&count, QEMU_CFG_FILE_DIR, sizeof(count));
+    outb('a', 0x947);
     count = be32_to_cpu(count);
     for (i = 0; i < count; i++) {
         qemu_cfg_read(&qfile, sizeof(qfile));
@@ -776,7 +806,7 @@ static int qemu_early_e820(void)
     }
 
     // walk e820 table
-    qemu_cfg_select(select);
+    qemu_cfg_select(select); //去给olly-vmm从新设置qemu_cfg->selector
     count = size/sizeof(table);
     for (i = 0, select = 0; i < count; i++) {
         qemu_cfg_read(&table, sizeof(table));

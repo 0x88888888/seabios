@@ -48,7 +48,7 @@ static inline int runningOnKVM(void) {
 #define PORT_SMI_STATUS             0x00b3
 #define PORT_QEMU_CFG_CTL           0x0510
 #define PORT_QEMU_CFG_DATA          0x0511
-#define PORT_QEMU_CFG_DMA_ADDR_HIGH 0x0514
+#define PORT_QEMU_CFG_DMA_ADDR_HIGH 0x0514  /* 这个值从来就没有被使用过 */
 #define PORT_QEMU_CFG_DMA_ADDR_LOW  0x0518
 
 // QEMU_CFG_DMA_CONTROL bits

@@ -11,6 +11,7 @@
 #include "util.h" // udelay
 #include "x86.h" // outl
 
+//MCH(PCI HOST)的两个端口
 #define PORT_PCI_CMD           0x0cf8
 #define PORT_PCI_DATA          0x0cfc
 
@@ -24,7 +25,7 @@ static void *mmconfig_addr(u16 bdf, u32 addr)
 static u32 ioconfig_cmd(u16 bdf, u32 addr)
 {
     /*
-     * 0xfc=11111100 只取addr的3-8位 
+     * 0xfc=11111100 只取addr的3-8位 ,低两位没有被encode进去
      */
     return 0x80000000 | (bdf << 8) | (addr & 0xfc);  
 }
@@ -32,12 +33,12 @@ static u32 ioconfig_cmd(u16 bdf, u32 addr)
 void pci_config_writel(u16 bdf, u32 addr, u32 val)
 {
 
-    if (!MODESEGMENT && mmconfig) {
+    if (!MODESEGMENT && mmconfig) { //MMIO的方式访问
         if(bdf == 0x00f8) {
             olly_printf("pci_config_writel: addr =0x%p  val=0x%x\n", mmconfig_addr(bdf, addr), val);
         }
         writel(mmconfig_addr(bdf, addr), val);
-    } else {
+    } else { //pio的方式访问
 
         //olly_printf("pci_config_writel port=0xcf8 bdf=0x%x ,addr=0x%x , ioconfig_cmd(bdf, addr)=0x%x\n", bdf, addr, ioconfig_cmd(bdf, addr));
         outl(ioconfig_cmd(bdf, addr), PORT_PCI_CMD);
@@ -97,7 +98,7 @@ u16 pci_config_readw(u16 bdf, u32 addr)
     } else {
         //olly_printf("2 --####--pci_config_readw --###-- ioconfig_cmd :0x%x \n", ioconfig_cmd(bdf, addr));
         outl(ioconfig_cmd(bdf, addr), PORT_PCI_CMD);
-        return inw(PORT_PCI_DATA + (addr & 2));
+        return inw(PORT_PCI_DATA + (addr & 2)); /* 地址的低2位，encode进去 */
     }
 }
 
@@ -117,8 +118,12 @@ u8 pci_config_readb(u16 bdf, u32 addr)
 void
 pci_config_maskw(u16 bdf, u32 addr, u16 off, u16 on)
 {
+    //读出offset在addr处的值
     u16 val = pci_config_readw(bdf, addr);
+
+    //给这个val分别设置off 和on bit
     val = (val & ~off) | on;
+    //写回去
     pci_config_writew(bdf, addr, val);
 }
 
@@ -161,9 +166,13 @@ u8 pci_find_capability(u16 bdf, u8 cap_id, u8 cap)
         /* find next */
         cap = pci_config_readb(bdf, cap + PCI_CAP_LIST_NEXT);
     }
+
+    //最多支持256个capability
     for (i = 0; cap && i <= 0xff; i++) {
         if (pci_config_readb(bdf, cap + PCI_CAP_LIST_ID) == cap_id)
-            return cap;
+            return cap; //找到
+            
+        //cap为下一个cap在pcie配置空间中的偏移
         cap = pci_config_readb(bdf, cap + PCI_CAP_LIST_NEXT);
     }
 
@@ -212,6 +221,8 @@ pci_next(int bdf, int bus)
  *      qemu_platform_setup()
  *       pci_setup()
  *        pci_probe_host()
+ * 
+ * 查找mch(pci host) 是否启用
  */
 // Check if PCI is available at all
 int

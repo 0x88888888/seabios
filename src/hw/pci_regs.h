@@ -31,7 +31,7 @@
 #define PCI_COMMAND		0x04	/* 16 bits */
 #define  PCI_COMMAND_IO		0x1	/* Enable response in I/O space */
 #define  PCI_COMMAND_MEMORY	0x2	/* Enable response in Memory space */
-#define  PCI_COMMAND_MASTER	0x4	/* Enable bus mastering */
+#define  PCI_COMMAND_MASTER	0x4	/* Enable bus mastering ，主设备:设备可以主动发起读写操作， 从设备:不能主动发起读写操作，只能被动的接收 host主桥和其他pci设备发起的读写请求*/
 #define  PCI_COMMAND_SPECIAL	0x8	/* Enable response to special cycles */
 #define  PCI_COMMAND_INVALIDATE	0x10	/* Use memory write and invalidate */
 #define  PCI_COMMAND_VGA_PALETTE 0x20	/* Enable palette snooping */
@@ -115,9 +115,9 @@
 #define PCI_MAX_LAT		0x3f	/* 8 bits */
 
 /* Header type 1 (PCI-to-PCI bridges) */
-#define PCI_PRIMARY_BUS		0x18	/* Primary bus number */
-#define PCI_SECONDARY_BUS	0x19	/* Secondary bus number */
-#define PCI_SUBORDINATE_BUS	0x1a	/* Highest bus number behind the bridge */
+#define PCI_PRIMARY_BUS		0x18	/* 上游总线号 Primary bus number */
+#define PCI_SECONDARY_BUS	0x19	/* 下游总线的起始号, Secondary bus number */
+#define PCI_SUBORDINATE_BUS	0x1a	/* 下游最大的总线号, Highest bus number behind the bridge */
 #define PCI_SEC_LATENCY_TIMER	0x1b	/* Latency timer for secondary interface */
 #define PCI_IO_BASE		0x1c	/* I/O range behind the bridge */
 #define PCI_IO_LIMIT		0x1d

@@ -26,6 +26,8 @@ int MaxPCIBus VARFSEG;
  *      qemu_platform_setup()
  *       pci_setup()
  *        pci_probe_devices()
+ * 
+ * 强行遍历所有的bdf,得到对应的pci device,添加到PCIDevices
  */ 
 // Find all PCI devices and populate PCIDevices linked list.
 void
@@ -237,18 +239,21 @@ void *
 pci_enable_membar(struct pci_device *pci, u32 addr)
 {
     wait_preempt();
+    //读出pcie配置bar处的内容
     u32 bar = pci_config_readl(pci->bdf, addr);
-    if (bar & PCI_BASE_ADDRESS_SPACE_IO) {
+    if (bar & PCI_BASE_ADDRESS_SPACE_IO) { //这个bar描述的是pio地址空间
         warn_internalerror();
         return NULL;
     }
-    if (bar & PCI_BASE_ADDRESS_MEM_TYPE_64) {
+    if (bar & PCI_BASE_ADDRESS_MEM_TYPE_64) { //mmio地址空间
         u32 high = pci_config_readl(pci->bdf, addr+4);
-        if (high) {
-            dprintf(1, "Can not map memory bar over 4Gig\n");
+        if (high) { //高32bit只能为0
+            dprintf(1, "Can not map memory bar over 4Gig\n"); 
             return NULL;
         }
     }
+
+    //低4bit为0
     bar &= PCI_BASE_ADDRESS_MEM_MASK;
     //地址不在 [4M, 20M) 之内
     if (bar + 4*1024*1024 < 20*1024*1024) {
@@ -257,7 +262,10 @@ pci_enable_membar(struct pci_device *pci, u32 addr)
         warn_internalerror();
         return NULL;
     }
+
+    //设置 PCI_COMMAND处，支持 mov指令访问pcie空间
     pci_config_maskw(pci->bdf, PCI_COMMAND, 0, PCI_COMMAND_MEMORY);
+
     pci->have_driver = 1;
     return (void*)bar;
 }

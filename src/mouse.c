@@ -36,6 +36,7 @@ mouse_command(int command, u8 *param)
 {
     if (usb_mouse_active())
         return usb_mouse_command(command, param);
+        
     return ps2_mouse_command(command, param);
 }
 
