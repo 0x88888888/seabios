@@ -216,12 +216,15 @@ static void piix4_apmc_smm_setup(int isabdf, int i440_bdf)
 void ich9_lpc_apmc_smm_setup(int isabdf, int mch_bdf)
 {
     /* check if SMM init is already done */
+    // acpi_pm_base + ICH9_PMIO_SMI_EN ==0xb030
+     outl(mch_bdf , 0x9745);
+
     u32 value = inl(acpi_pm_base + ICH9_PMIO_SMI_EN);
     if (value & ICH9_PMIO_SMI_EN_APMC_EN)
         return;
 
     /* enable the SMM memory window */
-    pci_config_writeb(mch_bdf, Q35_HOST_BRIDGE_SMRAM, 0x02 | 0x48);
+    pci_config_writeb(mch_bdf, Q35_HOST_BRIDGE_SMRAM /*0x9d*/, 0x02 | 0x48);
 
     smm_save_and_copy();
 
@@ -269,12 +272,14 @@ smm_device_setup(void)
     }
 
     //Q35机型
-    isapci = pci_find_device(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_ICH9_LPC);
-    pmpci = pci_find_device(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_Q35_MCH);
+    isapci = pci_find_device(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_ICH9_LPC /* 0x2918 */); //ich9lpc对象
+    pmpci = pci_find_device(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_Q35_MCH /*0x29c0*/ );  //PciHost对象
     if (isapci && pmpci) {
         SMMISADeviceBDF = isapci->bdf;
         SMMPMDeviceBDF = pmpci->bdf;
     }
+    //outl(SMMISADeviceBDF, 0x9734);
+    //outl(SMMPMDeviceBDF, 0x9734);
 }
 
 /*
@@ -293,7 +298,9 @@ smm_setup(void)
         return;
 
     dprintf(3, "init smm\n");
+    //0x2918
     u16 device = pci_config_readw(SMMISADeviceBDF, PCI_DEVICE_ID);
+    
     if (device == PCI_DEVICE_ID_INTEL_82371AB_3)
         piix4_apmc_smm_setup(SMMISADeviceBDF, SMMPMDeviceBDF);
     else

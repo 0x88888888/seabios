@@ -3,8 +3,8 @@
 
 #include "types.h" // u64
 
-#define E820_RAM          1
-#define E820_RESERVED     2
+#define E820_RAM          1  /* 映射到dram的物理地址 */
+#define E820_RESERVED     2  /* 比如pci设备的配置空间，用mmio的方式访问，这段物理地址没有映射到物理dram的 */
 #define E820_ACPI         3
 #define E820_NVS          4
 #define E820_UNUSABLE     5

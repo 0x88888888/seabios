@@ -134,10 +134,12 @@ interface_init(void)
     olly_printf("1.........interface_init \n");
 
     // Setup romfile items.
+    
     qemu_cfg_init(); //探测 qemu_cfg_fw设备
     olly_printf("2.........interface_init \n");
 
     coreboot_cbfs_init(); //直接返回了，忽略
+    
     multiboot_init(); //直接返回了
 
     // Setup ivt/bda/ebda
@@ -192,17 +194,21 @@ platform_hardware_setup(void)
     // Make sure legacy DMA isn't running.
     olly_printf("0------platform_hardware_setup\n");
     dma_setup(); //重置DMA控制器
+    
     olly_printf("1------platform_hardware_setup\n");
 
     // Init base pc hardware.
     pic_setup(); //重置PIC的状态
+    
     olly_printf("2------platform_hardware_setup\n");
     thread_setup();
     olly_printf("3------platform_hardware_setup\n");
     mathcp_setup(); // 浮点处理器
+    
     olly_printf("4------platform_hardware_setup\n");
     // Platform specific setup
     qemu_platform_setup(); //这个函数很重要阿
+    outb('a', 0x868);
     olly_printf("5------platform_hardware_setup\n");
     coreboot_platform_setup(); //直接返回了
     olly_printf("6------platform_hardware_setup\n");
@@ -265,12 +271,16 @@ maininit(void)
 {
     olly_printf("%s\n","0----------maininit \n");
     // Initialize internal interfaces.
+    
     interface_init();//访问各种设备端口,初始化一些数据结构
     olly_printf("%s\n","1----------maininit \n");
+    
 
     //访问设备的端口，QEMU建立好设备数据结构
     // Setup platform devices.
+    
     platform_hardware_setup(); // 这个函数非常非常的重要
+    outb('a', 0x637);
     olly_printf("%s\n","2----------maininit \n");
 
     // Start hardware initialization (if threads allowed during optionroms)
@@ -410,12 +420,15 @@ dopost(void)
     olly_printf("1----------------in dopost----------------------------\n");
     // Detect ram and setup internal malloc.
     qemu_preinit(); //确定QEMU模拟的机型,Q35, i440fx之类的
-    outb('a', 0x786);
+    
     olly_printf("2----------------in dopost----------------------------\n");
     coreboot_preinit(); //没有配置CONFIG_COREBOOT，直接返回了
     olly_printf("3----------------in dopost----------------------------\n");
+    
     malloc_preinit();
+    
     olly_printf("4----------------in dopost----------------------------\n");
+    
     // Relocate initialization code and call maininit().
     reloc_preinit(maininit, NULL);
     olly_printf("5----------------in dopost----------------------------\n");

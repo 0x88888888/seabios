@@ -70,6 +70,7 @@ static void piix4_fadt_setup(struct pci_device *pci, void *arg)
 static void ich9_lpc_fadt_setup(struct pci_device *dev, void *arg)
 {
     struct fadt_descriptor_rev1 *fadt = arg;
+    olly_printf("  ich9_lpc_fadt_setup\n");
 
     fadt->model = 1;
     fadt->reserved1 = 0;

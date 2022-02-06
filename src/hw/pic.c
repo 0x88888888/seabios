@@ -51,6 +51,8 @@ pic_reset(u8 irq0, u8 irq8)
 {
     if (!CONFIG_HARDWARE_IRQ)
         return;
+
+    //这些port，KVM处理了
     // Send ICW1 (select OCW1 + will send ICW4)
     outb(0x11, PORT_PIC1_CMD);
     outb(0x11, PORT_PIC2_CMD);

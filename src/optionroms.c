@@ -213,9 +213,14 @@ is_pci_vga(struct pci_device *pci)
 {
     if (pci->class != PCI_CLASS_DISPLAY_VGA)
         return 0;
+
     u16 cmd = pci_config_readw(pci->bdf, PCI_COMMAND);
+    /*
+     * VGA设备必须启动bar的PCI_COMMAND_IO和PCI_COMMAND_MEMORY的功能
+     */
     if (!(cmd & PCI_COMMAND_IO && cmd & PCI_COMMAND_MEMORY))
         return 0;
+
     while (pci->parent) {
         pci = pci->parent;
         u32 ctrl = pci_config_readb(pci->bdf, PCI_BRIDGE_CONTROL);

@@ -8,6 +8,11 @@ struct romfile_s {
     struct romfile_s *next;
     char name[128];
     u32 size;
+    /*
+     * cbfs_copyfile,
+     * const_read_file
+     * qemu_cfg_read_file,
+     */
     int (*copy)(struct romfile_s *file, void *dest, u32 maxlen);
 };
 void romfile_add(struct romfile_s *file);

@@ -53,6 +53,11 @@ handle_post()
                     mouse_init()
                 platform_hardware_setup()  这个函数很重要
                     dma_setup()
+                        out(0, 0x0d)
+                        out(0, 0xda)
+
+                        out(0xc0, 0xd6)
+                        out(0x00, 0xd4)
                     pic_setup()
                     thread_setup()
                     mathcp_setup()

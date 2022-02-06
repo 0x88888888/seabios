@@ -231,12 +231,12 @@ pci_probe_host(void)
     outl(0x80000000, PORT_PCI_CMD);
     olly_printf("----------------------------------------pci_probe_host 0\n");
     if (inl(PORT_PCI_CMD) != 0x80000000) {
+       
         olly_printf("----------------------------------------pci_probe_host 1\n");
         dprintf(1, "Detected non-PCI system\n");
         return -1;
     }
     olly_printf("----------------------------------------pci_probe_host 2\n");
-
     return 0;
 }
 

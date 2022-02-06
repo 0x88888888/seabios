@@ -173,8 +173,13 @@ int pci_init_device(const struct pci_device_id *ids
             * i440fx_mem_addr_setup
             * found_compatibleahci
             */
-            if (ids->func) // Q35:mch_mem_addr_setup,  [ src/fw/pciinit.c ]
+            if (ids->func){ // Q35:mch_mem_addr_setup,  [ src/fw/pciinit.c ]
+                olly_printf("\n ids_func = 0x%x  ids->devid=0x%x \n", ids->func, ids->devid);
                 ids->func(pci, arg);
+                
+                
+                //outb('5', 0x9731);
+            }
             return 0;
         }
         ids++;//next

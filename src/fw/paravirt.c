@@ -223,7 +223,7 @@ qemu_preinit(void)
         e820_add(0, rs, E820_RAM);
         dprintf(1, "RamSize: 0x%08x [cmos]\n", RamSize);
     }
-outb('a', 0x9877);
+
      olly_printf("8........qemu_preinit\n");
     /* reserve 256KB BIOS area at the end of 4 GB */
     e820_add(0xfffc0000, 256*1024, E820_RESERVED);
@@ -274,9 +274,11 @@ qemu_platform_setup(void)
     olly_printf("0-------qemu_platform_setup\n");
     pci_setup(); //构建pci 总线树、设备，初始好这些设备
     olly_printf("1-------qemu_platform_setup\n");
+    //outb('a', 0x834);
     smm_device_setup();
+    
     smm_setup();
-
+    outb('a', 0x816);
     // Initialize mtrr, msr_feature_control and smp
     mtrr_setup();
     msr_feature_control_setup();
@@ -499,6 +501,10 @@ qemu_cfg_write_file(void *src, struct romfile_s *file, u32 offset, u32 len)
                                       offset, len);
 }
 
+/*
+ *
+ * 添加 qemu_romfile_s对象到 RomfileRoot链表
+ */
 static void
 qemu_romfile_add(char *name, int select, int skip, int size)
 {
@@ -634,6 +640,10 @@ qemu_cfg_legacy(void)
                      , sizeof(numacount) + max_cpu*sizeof(u64)
                      , numacount*sizeof(u64));
 
+
+    /*
+     * acpi/table 和 smbios/table 目前没有实现
+     */
     // ACPI tables
     char name[128];
     u16 cnt;
@@ -756,9 +766,14 @@ void qemu_cfg_init(void)
         dprintf(1, "Moving pm_base to 0x%x\n", acpi_pm_base);
     }
 
+
     // serial console
     u16 nogfx = 0;
     qemu_cfg_read_entry(&nogfx, QEMU_CFG_NOGRAPHIC, sizeof(nogfx));
+    
+    /*
+     * 到RomfileRoot中查找 "etc/sercon-port" 和 "vgaroms/sgabios.bin"
+     */
     if (nogfx && !romfile_find("etc/sercon-port")
         && !romfile_find("vgaroms/sgabios.bin"))
         const_romfile_add_int("etc/sercon-port", PORT_SERIAL1);
@@ -789,7 +804,7 @@ static int qemu_early_e820(void)
 
     // find e820 table
     qemu_cfg_read_entry(&count, QEMU_CFG_FILE_DIR, sizeof(count));
-    outb('a', 0x947);
+    
     count = be32_to_cpu(count);
     for (i = 0; i < count; i++) {
         qemu_cfg_read(&qfile, sizeof(qfile));
@@ -799,6 +814,7 @@ static int qemu_early_e820(void)
         size = be32_to_cpu(qfile.size);
         break;
     }
+//outb(select, 0x989);    
     if (select == 0) {
         // may happen on old qemu
         dprintf(1, "qemu/e820: fw_cfg file etc/e820 not found\n");
@@ -808,6 +824,7 @@ static int qemu_early_e820(void)
     // walk e820 table
     qemu_cfg_select(select); //去给olly-vmm从新设置qemu_cfg->selector
     count = size/sizeof(table);
+    
     for (i = 0, select = 0; i < count; i++) {
         qemu_cfg_read(&table, sizeof(table));
         switch (table.type) {
@@ -832,6 +849,7 @@ static int qemu_early_e820(void)
         }
     }
 
+    //outb(i, 0x947);
     dprintf(3, "qemu/e820: RamSize: 0x%08x\n", RamSize);
     dprintf(3, "qemu/e820: RamSizeOver4G: 0x%016llx\n", RamSizeOver4G);
     return 1;
