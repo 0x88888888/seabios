@@ -16,6 +16,18 @@
 #include "util.h" // MaxCountCPUs
 #include "x86.h" // cpuid
 
+
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       smbios_setup()
+ *        smbios_legacy_setup()
+ *         smbios_entry_point_setup()
+ */ 
 static void
 smbios_entry_point_setup(u16 max_structure_size,
                          u16 structure_table_length,
@@ -37,8 +49,9 @@ smbios_entry_point_setup(u16 max_structure_size,
 
     struct smbios_entry_point ep;
     memset(&ep, 0, sizeof(ep));
-    ep.signature = SMBIOS_SIGNATURE;
+    ep.signature = SMBIOS_SIGNATURE;//_MS_ --> _SM_
     ep.length = 0x1f;
+    //SMBIOS 2.4 ?
     ep.smbios_major_version = 2;
     ep.smbios_minor_version = 4;
     ep.max_structure_size = max_structure_size;
@@ -507,6 +520,16 @@ smbios_init_type_127(void *start)
 
 #define TEMPSMBIOSSIZE (32 * 1024)
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       smbios_setup()
+ *        smbios_legacy_setup()
+ */ 
 void
 smbios_legacy_setup(void)
 {

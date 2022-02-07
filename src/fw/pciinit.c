@@ -66,7 +66,7 @@ struct pci_region_entry {
 
 struct pci_region {
     /* pci region assignments */
-    u64 base;
+    u64 base; //pci设备映射的cpu物理地址
     struct hlist_head list;
 };
 
@@ -270,12 +270,16 @@ static void mch_isa_bridge_setup(struct pci_device *dev, void *arg)
 
     ICH9LpcBDF = bdf;
 
+    /*
+     * 设置 ICH9_LPC_PMBASE, ICH9_LPC_ACPI_CTRL, ICH9_LPC_RCBA
+     */
     mch_isa_lpc_setup(bdf);
-    outb('a', 0x9743);
+    
     e820_add(ICH9_LPC_RCBA_ADDR, 16*1024, E820_RESERVED);
 
     acpi_pm1a_cnt = acpi_pm_base + 0x04;
     pmtimer_setup(acpi_pm_base + 0x08);
+    
 }
 
 static void storage_ide_setup(struct pci_device *pci, void *arg)
@@ -487,12 +491,16 @@ static void pci_bios_init_device(struct pci_device *pci)
 
     pci_init_device(pci_device_tbl, pci, NULL);
 
+    
  
     /* enable memory mappings */
+    /*
+     * 启用pci config中的bar映射的地址
+     */
     pci_config_maskw(bdf, PCI_COMMAND, 0,
                      PCI_COMMAND_IO | PCI_COMMAND_MEMORY | PCI_COMMAND_SERR);
 
-    //outb('b', 0x8976);
+    
     /* enable SERR# for forwarding */
     if (pci->header_type & PCI_HEADER_TYPE_BRIDGE)//bridge设备
         pci_config_maskw(bdf, PCI_BRIDGE_CONTROL, 0,
@@ -515,7 +523,7 @@ static void pci_bios_init_devices(void)
     foreachpci(pci) {
         pci_bios_init_device(pci);
     }
-    
+     
 }
 
 /*
@@ -1408,8 +1416,10 @@ static void pci_region_map_entries(struct pci_bus *busses, struct pci_region *r)
 {
     struct hlist_node *n;
     struct pci_region_entry *entry;
+
     hlist_for_each_entry_safe(entry, n, &r->list, node) {
         u64 addr = r->base;
+        //确定下一个entry的cpu物理地址
         r->base += entry->size;
         if (entry->bar == -1)
             // Update bus base address if entry is a bridge region
@@ -1550,10 +1560,10 @@ pci_setup(void)
 
     
     pci_bios_init_devices();
-    outb('a', 0x9741);
+     
     free(busses);
 
-    //为vga设备做好支持mmio准备
+    //确定vga准备好
     pci_enable_default_vga();
-    //outb('e',0x5234);
+     
 }

@@ -208,20 +208,23 @@ platform_hardware_setup(void)
     olly_printf("4------platform_hardware_setup\n");
     // Platform specific setup
     qemu_platform_setup(); //这个函数很重要阿
-    outb('a', 0x868);
+    
     olly_printf("5------platform_hardware_setup\n");
     coreboot_platform_setup(); //直接返回了
     olly_printf("6------platform_hardware_setup\n");
 
     // Setup timers and periodic clock interrupt
     timer_setup();
+    
     olly_printf("7------platform_hardware_setup\n");
     clock_setup(); // 这个很重要阿
+    
     olly_printf("8------platform_hardware_setup\n");
 
     // Initialize TPM, tpm ==  Trusted Platform Module
     tpm_setup(); 
     olly_printf("9------platform_hardware_setup\n");
+   
 }
 
 void
@@ -280,7 +283,7 @@ maininit(void)
     // Setup platform devices.
     
     platform_hardware_setup(); // 这个函数非常非常的重要
-    outb('a', 0x637);
+    
     olly_printf("%s\n","2----------maininit \n");
 
     // Start hardware initialization (if threads allowed during optionroms)
@@ -290,21 +293,25 @@ maininit(void)
     olly_printf("%s\n","3----------maininit \n");
     // Run vga option rom
     vgarom_setup();
+    
     olly_printf("%s\n","4----------maininit \n");
     sercon_setup();
     olly_printf("%s\n","5----------maininit \n");
     enable_vga_console();
+    
     olly_printf("%s\n","6----------maininit \n");
 
     // Do hardware initialization (if running synchronously)
-    if (!threads_during_optionroms()) {
+    if (!threads_during_optionroms()) { //走这里
         olly_printf("%s\n","66----------maininit \n");
+         
         device_hardware_setup();
+        
         olly_printf("%s\n","67----------maininit \n");
         wait_threads();
         olly_printf("%s\n","68----------maininit \n");
     }
-
+outb('a', 0x637);
     olly_printf("7----------maininit \n");
     // Run option roms
     optionrom_setup();

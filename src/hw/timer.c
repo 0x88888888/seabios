@@ -153,6 +153,19 @@ tsctimer_setfreq(u32 khz, const char *src)
     dprintf(1, "CPU Mhz=%u (%s)\n", (TimerKHz << ShiftTSC) / 1000, src);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_bios_init_platform()
+ *         pci_init_device(ids==pci_platform_tbl)
+ *          mch_isa_bridge_setup()
+ *           pmtimer_setup(ioport == 0xb008)
+ */ 
 void
 pmtimer_setup(u16 ioport)
 {

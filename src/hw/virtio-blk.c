@@ -194,6 +194,18 @@ fail:
     free(vdrive);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       virtio_mmio_setup_acpi()
+ *        virtio_mmio_setup_one()
+ *         ......
+ *          init_virtio_blk_mmio()
+ */
 void
 init_virtio_blk_mmio(void *mmio)
 {

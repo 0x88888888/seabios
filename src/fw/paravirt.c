@@ -278,10 +278,12 @@ qemu_platform_setup(void)
     smm_device_setup();
     
     smm_setup();
-    outb('a', 0x816);
+    
     // Initialize mtrr, msr_feature_control and smp
     mtrr_setup();
+    
     msr_feature_control_setup();
+    
     smp_setup(); //确定ap,发送sipi给ap
 
     // Create bios tables
@@ -289,9 +291,11 @@ qemu_platform_setup(void)
         pirtable_setup();
         mptable_setup();
     }
+    
+
     smbios_setup();
 
-    if (CONFIG_FW_ROMFILE_LOAD) {
+    if (CONFIG_FW_ROMFILE_LOAD /*1*/) {
         int loader_err;
 
         dprintf(3, "load ACPI tables\n");
@@ -316,6 +320,7 @@ qemu_platform_setup(void)
     }
 
     acpi_setup();
+     
 }
 
 

@@ -24,6 +24,11 @@
 
 #include "fw/acpi-dsdt.hex"
 
+/*
+ *
+ *
+ * 设置各种acpi表格的公用格式的头部
+ */ 
 static void
 build_header(struct acpi_table_header *h, u32 sig, int len, u8 rev)
 {
@@ -66,6 +71,18 @@ static void piix4_fadt_setup(struct pci_device *pci, void *arg)
                               ACPI_FADT_F_USE_PLATFORM_CLOCK);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       pci_setup()
+ *        pci_bios_init_platform()
+ *         pci_init_device(ids==pci_platform_tbl)
+ *          ich9_lpc_fadt_setup()
+ */ 
 /* PCI_VENDOR_ID_INTEL && PCI_DEVICE_ID_INTEL_ICH9_LPC */
 static void ich9_lpc_fadt_setup(struct pci_device *dev, void *arg)
 {
@@ -104,6 +121,16 @@ static const struct pci_device_id fadt_init_tbl[] = {
     PCI_DEVICE_END
 };
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       acpi_setup()
+ *        fill_dsdt()
+ */ 
 static void fill_dsdt(struct fadt_descriptor_rev1 *fadt, void *dsdt)
 {
     if (fadt->dsdt) {
@@ -114,6 +141,18 @@ static void fill_dsdt(struct fadt_descriptor_rev1 *fadt, void *dsdt)
     dprintf(1, "ACPI DSDT=%p\n", dsdt);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       acpi_setup()
+ *        build_fadt()
+ * 
+ * 构建 fadt
+ */ 
 static void *
 build_fadt(struct pci_device *pci)
 {
@@ -142,6 +181,17 @@ build_fadt(struct pci_device *pci)
     return fadt;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       acpi_setup()
+ *        build_madt()
+ * 
+ */
 static void*
 build_madt(void)
 {
@@ -292,6 +342,17 @@ build_notify(u8 *ssdt_ptr, const char *name, int skip, int count,
     return ssdt_ptr;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       acpi_setup()
+ *        build_ssdt()
+ *         patch_pcihp()
+ */ 
 static void patch_pcihp(int slot, u8 *ssdt_ptr, u32 eject)
 {
     ssdt_ptr[PCIHP_OFFSET_HEX] = getHex(slot >> 4);
@@ -310,6 +371,16 @@ static void patch_pcihp(int slot, u8 *ssdt_ptr, u32 eject)
     }
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       acpi_setup()
+ *        build_ssdt()
+ */ 
 static void*
 build_ssdt(void)
 {
@@ -338,6 +409,7 @@ build_ssdt(void)
     memcpy(ssdt_ptr, ssdp_misc_aml, sizeof(ssdp_misc_aml));
     if (!(sys_states[3] & 128))
         ssdt_ptr[acpi_s3_name[0]] = 'X';
+
     if (!(sys_states[4] & 128))
         ssdt_ptr[acpi_s4_name[0]] = 'X';
     else
@@ -364,6 +436,8 @@ build_ssdt(void)
     // build Scope(_SB_) header
     *(ssdt_ptr++) = 0x10; // ScopeOp
     ssdt_ptr = encodeLen(ssdt_ptr, length - (ssdt_ptr - ssdt), 3);
+
+    //_SB_
     *(ssdt_ptr++) = '_';
     *(ssdt_ptr++) = 'S';
     *(ssdt_ptr++) = 'B';
@@ -386,6 +460,7 @@ build_ssdt(void)
 
     // build "Name(CPON, Package() { One, One, ..., Zero, Zero, ... })"
     *(ssdt_ptr++) = 0x08; // NameOp
+    // CPON
     *(ssdt_ptr++) = 'C';
     *(ssdt_ptr++) = 'P';
     *(ssdt_ptr++) = 'O';
@@ -399,14 +474,16 @@ build_ssdt(void)
     // build Scope(PCI0) opcode
     *(ssdt_ptr++) = 0x10; // ScopeOp
     ssdt_ptr = encodeLen(ssdt_ptr, length - (ssdt_ptr - ssdt), 3);
+    // PCI0
     *(ssdt_ptr++) = 'P';
     *(ssdt_ptr++) = 'C';
     *(ssdt_ptr++) = 'I';
     *(ssdt_ptr++) = '0';
 
     // build Device object for each slot
-    u32 rmvc_pcrm = inl(PCI_RMV_BASE);
-    for (i=1; i<PCI_SLOTS; i++) {
+    u32 rmvc_pcrm = inl(PCI_RMV_BASE /* 0xae0c */);  //dummy设备处理掉
+    
+    for (i=1; i<PCI_SLOTS /*32 */; i++) {
         u32 eject = rmvc_pcrm & (0x1 << i);
         memcpy(ssdt_ptr, PCIHP_AML, PCIHP_SIZEOF);
         patch_pcihp(i, ssdt_ptr, eject != 0);
@@ -425,11 +502,24 @@ build_ssdt(void)
 #define HPET_ID         0x000
 #define HPET_PERIOD     0x004
 
+
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       acpi_setup()
+ *        build_hpet()
+ * 
+ */ 
 static void*
 build_hpet(void)
 {
     struct acpi_20_hpet *hpet;
-    const void *hpet_base = (void *)BUILD_HPET_ADDRESS;
+    const void *hpet_base = (void *)BUILD_HPET_ADDRESS;  /* 0xfed0_0000 */
+    //olly-vmm 给的这两个数据都是0
     u32 hpet_vendor = readl(hpet_base + HPET_ID) >> 16;
     u32 hpet_period = readl(hpet_base + HPET_PERIOD);
 
@@ -467,6 +557,16 @@ acpi_build_srat_memory(struct srat_memory_affinity *numamem,
     numamem->range_length = cpu_to_le64(len);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       acpi_setup()
+ *        build_srat()
+ */ 
 static void *
 build_srat(void)
 {
@@ -561,6 +661,16 @@ fail:
     return NULL;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       acpi_setup()
+ *        build_mcfg_q35()
+ */ 
 static void *
 build_mcfg_q35(void)
 {
@@ -575,8 +685,8 @@ build_mcfg_q35(void)
     memset(mcfg, 0, len);
     mcfg->allocation[0].address = cpu_to_le64(Q35_HOST_BRIDGE_PCIEXBAR_ADDR);
     mcfg->allocation[0].pci_segment = cpu_to_le16(Q35_HOST_PCIE_PCI_SEGMENT);
-    mcfg->allocation[0].start_bus_number = Q35_HOST_PCIE_START_BUS_NUMBER;
-    mcfg->allocation[0].end_bus_number = Q35_HOST_PCIE_END_BUS_NUMBER;
+    mcfg->allocation[0].start_bus_number = Q35_HOST_PCIE_START_BUS_NUMBER; // 0 
+    mcfg->allocation[0].end_bus_number = Q35_HOST_PCIE_END_BUS_NUMBER; // 255
 
     build_header((void *)mcfg, MCFG_SIGNATURE, len, 1);
     return mcfg;
@@ -599,6 +709,8 @@ static const struct pci_device_id acpi_find_tbl[] = {
  *     platform_hardware_setup()
  *      qemu_platform_setup()
  *       acpi_setup()
+ * 
+ * 建立acpi表格
  */ 
 void
 acpi_setup(void)
@@ -625,13 +737,20 @@ acpi_setup(void)
     } while(0)
 
     struct fadt_descriptor_rev1 *fadt = build_fadt(pci);
+      
     ACPI_INIT_TABLE(fadt);
+    
     ACPI_INIT_TABLE(build_ssdt());
+    
     ACPI_INIT_TABLE(build_madt());
+    
     ACPI_INIT_TABLE(build_hpet());
+    
     ACPI_INIT_TABLE(build_srat());
+
     if (pci->device == PCI_DEVICE_ID_INTEL_ICH9_LPC)
         ACPI_INIT_TABLE(build_mcfg_q35());
+ 
 
     struct romfile_s *file = NULL;
     for (;;) {
@@ -667,7 +786,9 @@ acpi_setup(void)
             return;
         }
         memcpy(dsdt, AmlCode, sizeof(AmlCode));
+        
         fill_dsdt(fadt, dsdt);
+         
         /* Strip out compiler-generated header if any */
         memset(dsdt, 0, sizeof *dsdt);
         build_header(dsdt, DSDT_SIGNATURE, sizeof(AmlCode), 1);
@@ -692,5 +813,7 @@ acpi_setup(void)
     memcpy(rsdp.oem_id, BUILD_APPNAME6, 6);
     rsdp.rsdt_physical_address = cpu_to_le32((u32)rsdt);
     rsdp.checksum -= checksum(&rsdp, 20);
+ 
     copy_acpi_rsdp(&rsdp);
+     
 }

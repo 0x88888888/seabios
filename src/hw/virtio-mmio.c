@@ -53,6 +53,7 @@ void virtio_mmio_setup_acpi(void)
  */
 void virtio_mmio_setup_one(u64 addr)
 {
+    //virtio 设备名称
     static const char *names[] = {
         [  1 ] = "net",
         [  2 ] = "blk",

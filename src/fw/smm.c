@@ -217,15 +217,15 @@ void ich9_lpc_apmc_smm_setup(int isabdf, int mch_bdf)
 {
     /* check if SMM init is already done */
     // acpi_pm_base + ICH9_PMIO_SMI_EN ==0xb030
-     outl(mch_bdf , 0x9745);
+     
 
-    u32 value = inl(acpi_pm_base + ICH9_PMIO_SMI_EN);
-    if (value & ICH9_PMIO_SMI_EN_APMC_EN)
+    u32 value = inl(acpi_pm_base + ICH9_PMIO_SMI_EN /* 0x30 */);
+    if (value & ICH9_PMIO_SMI_EN_APMC_EN)  // olly-vmm返回值，会设置这个标记，所以就直接返回了
         return;
 
     /* enable the SMM memory window */
     pci_config_writeb(mch_bdf, Q35_HOST_BRIDGE_SMRAM /*0x9d*/, 0x02 | 0x48);
-
+outl(mch_bdf , 0x9745);
     smm_save_and_copy();
 
     /* enable SMI generation when writing to the APMC register */
@@ -303,6 +303,6 @@ smm_setup(void)
     
     if (device == PCI_DEVICE_ID_INTEL_82371AB_3)
         piix4_apmc_smm_setup(SMMISADeviceBDF, SMMPMDeviceBDF);
-    else
+    else // Q35走这里
         ich9_lpc_apmc_smm_setup(SMMISADeviceBDF, SMMPMDeviceBDF);
 }

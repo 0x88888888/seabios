@@ -223,9 +223,19 @@ intel_155f(struct bregs *regs)
 #define BOOT_DISPLAY_EFP2       (1 << 6)
 #define BOOT_DISPLAY_LCD2       (1 << 7)
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     vgarom_setup()
+ *      vgahook_setup()
+ *       intel_setup()
+ */
 static void
 intel_setup(struct pci_device *pci)
 {
+    outb("i", 0x3567);
     VGAHookHandlerType = VH_INTEL;
 
     IntelDisplayType = BOOT_DISPLAY_DEFAULT;
@@ -347,6 +357,7 @@ vgahook_setup(struct pci_device *pci)
 {
     if (!CONFIG_VGAHOOKS)
         return;
+    olly_printf(" \n vgahook_setup , CBvendor=%s  pci->vendor=0x%x \n",CBvendor,  pci->vendor);
 
     if (strcmp(CBvendor, "KONTRON") == 0 && strcmp(CBpart, "986LCD-M") == 0)
         kontron_setup(pci);
@@ -358,6 +369,6 @@ vgahook_setup(struct pci_device *pci)
         winent_mb6047_setup(pci);
     else if (pci->vendor == PCI_VENDOR_ID_VIA)
         via_setup(pci);
-    else if (pci->vendor == PCI_VENDOR_ID_INTEL)
+    else if (pci->vendor == PCI_VENDOR_ID_INTEL) //这里
         intel_setup(pci);
 }

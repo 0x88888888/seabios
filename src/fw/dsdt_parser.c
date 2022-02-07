@@ -653,6 +653,8 @@ int acpi_dsdt_present_eisaid(u16 eisaid)
  *     platform_hardware_setup()
  *      qemu_platform_setup()
  *       acpi_dsdt_parse()
+ * 
+ *  解析各种acpi表格
  */
 void acpi_dsdt_parse(void)
 {

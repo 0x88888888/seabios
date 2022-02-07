@@ -159,10 +159,10 @@ int pci_init_device(const struct pci_device_id *ids
             /*
             * ich9_lpc_fadt_setup，
             * ich9_smbus_setup
-            * mch_mem_addr_setup,
+            * mch_mem_addr_setup,    [pci_host]
             * piix4_fadt_setup,
             * piix_isa_bridge_setup
-            * mch_isa_bridge_setup
+            * mch_isa_bridge_setup   [ich9_lpc]
             * storage_ide_setup
             * piix_ide_setup
             * pic_ibm_setup
@@ -172,6 +172,8 @@ int pci_init_device(const struct pci_device_id *ids
             * intel_igd_setup
             * i440fx_mem_addr_setup
             * found_compatibleahci
+            * 
+            *  
             */
             if (ids->func){ // Q35:mch_mem_addr_setup,  [ src/fw/pciinit.c ]
                 olly_printf("\n ids_func = 0x%x  ids->devid=0x%x \n", ids->func, ids->devid);

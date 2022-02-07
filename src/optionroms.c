@@ -327,6 +327,14 @@ static void boot_irq_restore(void)
     SET_IVT(0x19, seabios);
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     vgarom_setup()
+ *      init_pcirom(isvga == 1, sources== NULL)
+ */ 
 // Attempt to map and initialize the option rom on a given PCI device.
 static void
 init_pcirom(struct pci_device *pci, int isvga, u64 *sources)
@@ -475,21 +483,27 @@ vgarom_setup(void)
     RunPCIroms = romfile_loadint("etc/pci-optionrom-exec", 2);
     ScreenAndDebug = romfile_loadint("etc/screen-and-debug", 1);
 
+
     // Clear option rom memory
-    memset((void*)BUILD_ROM_START, 0, rom_get_max() - BUILD_ROM_START);
+    memset((void*)BUILD_ROM_START /*0xc000 */, 0, rom_get_max() - BUILD_ROM_START);
 
     // Find and deploy PCI VGA rom.
     struct pci_device *pci;
     foreachpci(pci) {
         if (!is_pci_vga(pci))
             continue;
-        vgahook_setup(pci);
-        init_pcirom(pci, 1, NULL);
+        olly_printf("\n vgarom_setup , vga pci->bdf=0x%x\n", pci->bdf);
+         
+        vgahook_setup(pci); //olly-vmm的vga没有做任何事情
+        init_pcirom(pci, 1, NULL); //设置好vga rom的cpu物理地址
         have_vga = 1;
         break;
     }
-    if (!have_vga)
+
+
+    if (!have_vga) //判断不成立
         try_setup_display_other();
+
 
     // Find and deploy CBFS vga-style roms not associated with a device.
     run_file_roms("vgaroms/", 1, NULL);
@@ -498,6 +512,9 @@ vgarom_setup(void)
     if (rom_get_last() != BUILD_ROM_START)
         // VGA rom found
         VgaROM = (void*)BUILD_ROM_START;
+    
+     
+
 }
 
 void

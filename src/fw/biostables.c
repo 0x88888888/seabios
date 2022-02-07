@@ -43,6 +43,16 @@ copy_pir(void *pos)
     PirAddr = newpos;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       mptable_setup()
+ *        copy_mptable()
+ */ 
 void
 copy_mptable(void *pos)
 {
@@ -104,6 +114,16 @@ get_acpi_rsdp_length(void *pos, unsigned size)
 
 struct rsdp_descriptor *RsdpAddr;
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       acpi_setup()
+ *        copy_acpi_rsdp()
+ */ 
 void
 copy_acpi_rsdp(void *pos)
 {
@@ -117,11 +137,20 @@ copy_acpi_rsdp(void *pos)
         warn_noalloc();
         return;
     }
-    dprintf(1, "Copying ACPI RSDP from %p to %p\n", pos, newpos);
+    dprintf(1, "Copying ACPI RSDP from %p to %p   RsdpAddr=%p\n", pos, newpos, newpos);
     memcpy(newpos, pos, length);
     RsdpAddr = newpos;
 }
 
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       find_acpi_rsdp()
+ */ 
 void *find_acpi_rsdp(void)
 {
     unsigned long start = SYMBOL(zonefseg_start);
@@ -292,6 +321,19 @@ smbios_next(struct smbios_entry_point *smbios, void *prev)
 
 struct smbios_entry_point *SMBiosAddr;
 
+
+/*
+ * handle_post()
+ *  dopost()
+ *   reloc_preinit(f==maininit)
+ *    maininit()
+ *     platform_hardware_setup()
+ *      qemu_platform_setup()
+ *       smbios_setup()
+ *        smbios_legacy_setup()
+ *         smbios_entry_point_setup()
+ *          copy_smbios()
+ */ 
 void
 copy_smbios(void *pos)
 {
@@ -435,6 +477,10 @@ smbios_new_type_0(void *start,
  *      qemu_platform_setup()
  *       smbios_setup()
  *        smbios_romfile_setup()
+ * 
+ * smbios == System Management BIOS 
+ * 
+ * reference : https://blog.csdn.net/zhoudaxia/article/details/5919699
  */ 
 static int
 smbios_romfile_setup(void)
@@ -446,6 +492,9 @@ smbios_romfile_setup(void)
     u16 qtables_len, need_t0 = 1;
     u8 *qtables, *tables;
 
+    /*
+     * 目前,olly-vmm没有实现smbios
+     */
     if (!f_anchor || !f_tables || f_anchor->size != sizeof(ep))
         return 0;
 
@@ -527,6 +576,7 @@ smbios_setup(void)
 {
     if (smbios_romfile_setup())
         return;
+        
     smbios_legacy_setup();
 }
 

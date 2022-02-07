@@ -81,12 +81,17 @@ handle_post()
                                         pci_slot_get_irq = mch_pci_slot_get_irq            
                             pci_bios_check_devices()
                                 pci_bios_get_bar() 从设备处得到设备bar的size, prefetchable, is64等信息
-
+                                
                             pci_bios_map_devices()
                                 pci_region_map_entries()  
                                     pci_region_map_one_entry() 这里给cpu分配物理地址
                                         pci_set_io_region_addr() 调用pci_config_writel()将物理地址写入设备的设备pcie配置bar
-                            pci_bios_init_devices()
+                            pci_bios_init_devices()  这个函数很重要,循环调用pci_bios_init_device
+                                pci_bios_init_device(pci_device)
+                                    pci_init_device(pci_device_tbl, pci, NULL)
+                                        mch_isa_bridge_setup() 
+                                    pci_config_maskw(bdf, PCI_COMMAND, 0, PCI_COMMAND_IO | PCI_COMMAND_MEMORY | PCI_COMMAND_SERR); 启用pci bar
+
                             pci_enable_default_vga()
                         smm_device_setup()
                         smm_setup()
@@ -100,9 +105,12 @@ handle_post()
                         smbios_setup()
                         find_acpi_rsdp()    找到acpi的 rsdt表
                         acpi_dsdt_parse()   解析acpi表
-                        virtio_mmio_setup_acpi()
+
+                        virtio_mmio_setup_acpi() 
+                            virtio_mmio_setup_one()
                         acpi_setup()如果上面没有找到acpi表，就用这个去构建
-                    coreboot_platform_setup()
+                            build_fadt()
+                    coreboot_platform_setup() 直接返回
                     timer_setup()
                     clock_setup()
                         pit_setup()
@@ -115,7 +123,7 @@ handle_post()
                     VgaROM = (void*)BUILD_ROM_START;
                 sercon_setup()
                 enable_vga_console()
-                device_hardware_setup()
+                device_hardware_setup()  初始化非PCI设备, usb,ps2, block, serial 之类的设备
                     usb_setup()
                     ps2port_setup()
                         acpi_dsdt_present_eisaid(0x0303)   确定ps2 controller是否存在

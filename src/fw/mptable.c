@@ -26,6 +26,8 @@
  *     platform_hardware_setup()
  *      qemu_platform_setup()
  *       mptable_setup()
+ * 
+ * 设置ioapic和lapic信息
  */ 
 void
 mptable_setup(void)
@@ -46,7 +48,7 @@ mptable_setup(void)
     config->spec = 4;
     memcpy(config->oemid, BUILD_CPUNAME8, sizeof(config->oemid));
     memcpy(config->productid, "0.1         ", sizeof(config->productid));
-    config->lapic = BUILD_APIC_ADDR;
+    config->lapic = BUILD_APIC_ADDR; /* 0xfee0_0000 */
 
     // Detect cpu info
     u32 cpuid_signature, ebx, ecx, cpuid_features;
@@ -63,6 +65,7 @@ mptable_setup(void)
         pkgcpus = (ebx >> 16) & 0xff;
         pkgcpus = 1 << (__fls(pkgcpus - 1) + 1); /* round up to power of 2 */
     }
+    //kvm实现，得到apic version
     u8 apic_version = readl((u8*)BUILD_APIC_ADDR + 0x30) & 0xff;
 
     // CPU definitions.
@@ -109,7 +112,7 @@ mptable_setup(void)
     ioapic->apicid = ioapic_id;
     ioapic->apicver = 0x11;
     ioapic->flags = 1; // enable
-    ioapic->apicaddr = BUILD_IOAPIC_ADDR;
+    ioapic->apicaddr = BUILD_IOAPIC_ADDR; /* 0xfec0_0000 */
     entrycount++;
 
     /* irqs */
@@ -201,6 +204,7 @@ mptable_setup(void)
     floating.length = 1;
     floating.spec_rev = 4;
     floating.checksum -= checksum(&floating, sizeof(floating));
+
     copy_mptable(&floating);
     free(config);
 }

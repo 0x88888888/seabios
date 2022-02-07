@@ -75,6 +75,7 @@ void mtrr_setup(void)
     for (i = 0; i < 8; i++)
         if (RamSize >= 65536 * (i + 1))
             u.valb[i] = MTRR_MEMTYPE_WB;
+            
     wrmsr_smp(MSR_MTRRfix64K_00000, u.val);
     u.val = 0;
     for (i = 0; i < 8; i++)
