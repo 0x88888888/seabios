@@ -517,10 +517,13 @@ block_setup(void)
 {
     olly_printf("0--------block_setup\n");
     floppy_setup(); // olly-vmm先不实现 floppy
+    
     olly_printf("1--------block_setup\n");
-    ata_setup();  //先不实现，直接返回, olly-vmm先不实现 floppy
+    ata_setup();  //先不实现，直接返回
+    
     olly_printf("2--------block_setup\n");
     ahci_setup();
+    outb('a', 0x7845);
     olly_printf("3--------block_setup\n");
     sdcard_setup(); //先不实现，直接返回
     olly_printf("4--------block_setup\n");

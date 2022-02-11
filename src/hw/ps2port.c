@@ -85,15 +85,15 @@ i8042_flush(void)
 {
     dprintf(7, "i8042_flush\n");
     int i;
-    for (i=0; i<I8042_BUFFER_SIZE; i++) {
+    for (i=0; i<I8042_BUFFER_SIZE /* 16字节 */; i++) {
         olly_printf("0-----------i8042_flush\n");
         u8 status = inb(PORT_PS2_STATUS); //0x0064
-        if (! (status & I8042_STR_OBF)) //ps2 controller状态良好,可以直接返回了
+        if (! (status & I8042_STR_OBF)) //设备的out buffer，没有数据了
             return 0;
 
         udelay(50);
         olly_printf("1-----------i8042_flush\n");
-        u8 data = inb(PORT_PS2_DATA); //0x0060,把垃圾数据读出来
+        u8 data = inb(PORT_PS2_DATA); //0x0060,读一个字节出来
         dprintf(7, "i8042 flushed %x (status=%x)\n", data, status);
     }
 
@@ -141,6 +141,7 @@ __i8042_command(int command, u8 *param)
     }
     
 
+    //olly_printf("------------------------------------------\n");
     // Receive parameters (if any).
     //发送命令后，如果需要从设备接收数据，从0x60数据端口接收数据
     for (i = 0; i < receive; i++) {
@@ -149,7 +150,7 @@ __i8042_command(int command, u8 *param)
             return ret;
         }
         param[i] = inb(PORT_PS2_DATA);  //guest将设备output buffer中的数据读进来
-        dprintf(7, "i8042 param=%x\n", param[i]);
+        olly_printf("\n param[i]=0x %x\n", param[i]);
     }
     return 0;
 }
@@ -239,12 +240,18 @@ ps2_recvbyte(int aux, int needack, int timeout)
             u8 data = inb(PORT_PS2_DATA); //0x0060
             dprintf(7, "ps2 read %x\n", data);
 
-            if (!!(status & I8042_STR_AUXDATA) == aux) {
+            /*
+             * 读出来的status信息必须要与aux相等
+             */
+            if (!!(status & I8042_STR_AUXDATA) == aux) { //
                 if (!needack) //如果不需要needack,就直接返回data了
                     return data;
 
+                //下面是需要olly-vmm的ps2 controller 返回 ack的情况了
+
                 if (data == PS2_RET_ACK) //0xfa
                     return data;
+
                 if (data == PS2_RET_NAK) { //0xfe
                     dprintf(1, "Got ps2 nak (status=%x)\n", status);
                     return data;
@@ -260,6 +267,8 @@ ps2_recvbyte(int aux, int needack, int timeout)
             return -1;
         }
         yield();
+
+        //outb(status, 0x2237);
     }
 }
 
@@ -277,11 +286,13 @@ ps2_sendbyte(int aux, u8 command, int timeout)
     else
         ret = i8042_kbd_write(command); //这里,将command发送出去
 
+    //outb(ret, 0x8723);
     if (ret)
         return ret;
 
-    // Read ack. 从qemuin一个ACK过来
+    // Read ack. 从qemu in一个ACK过来
     ret = ps2_recvbyte(aux, 1, timeout);
+    
     if (ret < 0)
         return ret;
 
@@ -316,42 +327,47 @@ __ps2_command(int aux, int command, u8 *param)
     u8 ps2ctr = GET_LOW(Ps2ctr);
 
     /* 0b110000 | ps2ctr*/
+    //把mouse和keyboard都禁用了先
     u8 newctr = ((ps2ctr | I8042_CTR_AUXDIS/* bit 5*/ | I8042_CTR_KBDDIS/*bit 4*/)
                  & ~(I8042_CTR_KBDINT/*bit 0*/|I8042_CTR_AUXINT /* bit 1 */));
 
-    dprintf(6, "i8042 ctr old=%x new=%x\n", ps2ctr, newctr);
+    olly_printf("i8042 ctr old=%x new=%x\n", ps2ctr, newctr);
     //通过0x64端口的0x60命令 将newctrl out到 qemu的ps2 controller.
-    int ret = i8042_command(I8042_CMD_CTL_WCTR, &newctr);//0x60
+    int ret = i8042_command(I8042_CMD_CTL_WCTR /* 0x1060 */, &newctr);//0x60, newctr通过PORT_PS2_DATA 写到olly-vmm
     if (ret) //前一步，必须要返回0
         return ret;
 
     // Flush any interrupts already pending.
+    olly_printf("__ps2_command : 0\n");
     yield();
-
+    olly_printf("__ps2_command : 1\n");
     // Enable port command is being sent to.
-    SET_LOW(Ps2ctr, newctr);
+    SET_LOW(Ps2ctr, newctr); //control register保存回来
     if (aux) // mouse
-        newctr &= ~I8042_CTR_AUXDIS;
+        newctr &= ~I8042_CTR_AUXDIS; //启用mouse中断
     else // keyboard
-        newctr &= ~I8042_CTR_KBDDIS;//启动key board
+        newctr &= ~I8042_CTR_KBDDIS;//启动key board 中断
 
-    ret = i8042_command(I8042_CMD_CTL_WCTR, &newctr);
+    //先通知ps2 controller,取消 mouse或则 keyboard
+    ret = i8042_command(I8042_CMD_CTL_WCTR, &newctr); //newctr通过PORT_PS2_DATA 写到olly-vmm
 
     if (ret)
         goto fail;
  
- 
+    olly_printf("__ps2_command : 2\n");
     if ((u8)command == (u8)ATKBD_CMD_RESET_BAT) { //0xff
         // Reset is special wrt timeouts.
  
         // Send command.
-        ret = ps2_sendbyte(aux, command, 1000); // 通过data port发送 command
  
+        ret = ps2_sendbyte(aux, command, 1000); // 通过data port(0x60)发送 command
+        //
         if (ret)
             goto fail;
 
         // Receive parameters.
-        ret = ps2_recvbyte(aux, 0, 4000);
+        ret = ps2_recvbyte(aux, 0, 4000);  // 通过data port(0x60)接收数据
+        //outb(ret, 0x7345);
         if (ret < 0)
             goto fail;
         param[0] = ret;
@@ -612,8 +628,10 @@ ps2_keyboard_setup(void *data)
     // Controller self-test.
     u8 param[2];
     ret = i8042_command(I8042_CMD_CTL_TEST, param); //发送 0xaa到qemu,返回0x55到param[0]
+    
     if (ret)
         return;
+    
     //qemu必须返回0x55
     if (param[0] != 0x55) {
         dprintf(1, "i8042 self test failed (got %x not 0x55)\n", param[0]);
@@ -623,6 +641,7 @@ ps2_keyboard_setup(void *data)
     olly_printf("3--------ps2_keyboard_setup param[0]=%x, param[1]=0x%x \n", param[0], param[1]);
     // Controller keyboard test.
     ret = i8042_command(I8042_CMD_KBD_TEST, param);//发送0xab到qemu，测试 the first PS/2 port(也就是keyboard用的 ps2 controller 端口)
+    
     if (ret)
         return;
         
@@ -636,8 +655,11 @@ ps2_keyboard_setup(void *data)
     int spinupdelay = romfile_loadint("etc/ps2-keyboard-spinup", 0);
     u32 end = timer_calc(spinupdelay);
     olly_printf("4--------ps2_keyboard_setup  param[0]=%x, param[1]=0x%x \n", param[0], param[1]);
+
     for (;;) {
-        ret = ps2_kbd_command(ATKBD_CMD_RESET_BAT, param);//0xff, 应该是reset keyboard
+        
+        ret = ps2_kbd_command(ATKBD_CMD_RESET_BAT, param);//0xff, 应该是reset keyboard,需要接收olly-vmm返回一个0xaa
+         
         olly_printf("44--------ps2_keyboard_setup ret=0x%x \n",ret);
         if (!ret) //qemu返回0才会推出循环
             break;
@@ -649,6 +671,7 @@ ps2_keyboard_setup(void *data)
         }
         yield();
     }
+    
     olly_printf("5--------ps2_keyboard_setup\n");
     if (param[0] != 0xaa) {
         dprintf(1, "keyboard self test failed (got %x not 0xaa)\n", param[0]);
@@ -656,8 +679,9 @@ ps2_keyboard_setup(void *data)
     }
 
     olly_printf("66666--------ps2_keyboard_setup\n");
-    /* Disable keyboard */
+    /* Disable keyboard scanning */
     ret = ps2_kbd_command(ATKBD_CMD_RESET_DIS, NULL);//0xf5
+    
     olly_printf("--------66666--------ps2_keyboard_setup\n");
     if (ret)
         return;
@@ -666,6 +690,7 @@ ps2_keyboard_setup(void *data)
     // Set scancode command (mode 2)
     param[0] = 0x02; //这个参数发送到qmeu
     ret = ps2_kbd_command(ATKBD_CMD_SSCANSET, param);//0xf0
+    
     olly_printf("--------777777--------ps2_keyboard_setup\n");
     if (ret)
         return;
@@ -705,12 +730,13 @@ ps2port_setup(void)
     olly_printf("1------------ps2port_setup\n");
     dprintf(3, "init ps2port\n");
 
-    enable_hwirq(1, FUNC16(entry_09));
+    enable_hwirq(1, FUNC16(entry_09)); //键盘中断处理函数
     olly_printf("2------------ps2port_setup\n");
-    enable_hwirq(12, FUNC16(entry_74));
+    enable_hwirq(12, FUNC16(entry_74));  //鼠标中断处理函数
     olly_printf("3------------ps2port_setup\n");
 
     //键盘setup工作
     run_thread(ps2_keyboard_setup, NULL);
+    
     olly_printf("4------------ps2port_setup\n");
 }

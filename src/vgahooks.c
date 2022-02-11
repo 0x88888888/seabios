@@ -235,7 +235,7 @@ intel_155f(struct bregs *regs)
 static void
 intel_setup(struct pci_device *pci)
 {
-    outb("i", 0x3567);
+    outb('i', 0x3567);
     VGAHookHandlerType = VH_INTEL;
 
     IntelDisplayType = BOOT_DISPLAY_DEFAULT;

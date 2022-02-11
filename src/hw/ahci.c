@@ -684,7 +684,7 @@ ahci_controller_setup(struct pci_device *pci)
     if (create_bounce_buf() < 0)
         return;
 
-    //设置 bar 5
+    //设置 bar 5,返回mmio的地址值
     void *iobase = pci_enable_membar(pci, PCI_BASE_ADDRESS_5);
     olly_printf("ahci_controller_setup iobase=%p\n", iobase);
     if (!iobase){

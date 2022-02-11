@@ -170,8 +170,10 @@ device_hardware_setup(void)
     usb_setup();
     olly_printf("1------device_hardware_setup\n");
     ps2port_setup();
+    
     olly_printf("2------device_hardware_setup\n");
     block_setup();
+    outb('a', 0x2456);
     olly_printf("3------device_hardware_setup\n");
     lpt_setup();
     olly_printf("4------device_hardware_setup\n");

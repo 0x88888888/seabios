@@ -176,7 +176,7 @@ int pci_init_device(const struct pci_device_id *ids
             *  
             */
             if (ids->func){ // Q35:mch_mem_addr_setup,  [ src/fw/pciinit.c ]
-                olly_printf("\n ids_func = 0x%x  ids->devid=0x%x \n", ids->func, ids->devid);
+                olly_printf("\n ids_func = %p  ids->devid=0x%x \n", ids->func, ids->devid);
                 ids->func(pci, arg);
                 
                 

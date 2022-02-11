@@ -177,7 +177,8 @@ floppy_setup(void)
 
     if (CONFIG_QEMU) {
         //先查看是否有 floppy设备
-        u8 type = rtc_read(CMOS_FLOPPY_DRIVE_TYPE);
+        u8 type = rtc_read(CMOS_FLOPPY_DRIVE_TYPE); //没有实现，先返回0
+        
         if (type & 0xf0)
             addFloppy(0, type >> 4);
 

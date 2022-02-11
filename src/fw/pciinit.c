@@ -1373,7 +1373,7 @@ pci_region_map_one_entry(struct pci_region_entry *entry, u64 addr)
 
         //outb('u', 0x7234);
         //去qemu设置bar的addr了,但是没有设置pci config的command的PCI_COMMAND_IO和PCI_COMMAND_MEMORY启动pci bar的功能
-        dprintf(1, "\nentry->dev->bdf=0x%x, entry->bar=0x%x, addr=0x%lx, entry->is64=0x%x\n",entry->dev->bdf, entry->bar, addr, entry->is64);
+        dprintf(1, "\n entry->dev->bdf=0x%x, entry->bar=0x%x, addr=0x%llx, entry->is64=0x%x\n",entry->dev->bdf, entry->bar, addr, entry->is64);
         //outb('u', 0x7234);
         pci_set_io_region_addr(entry->dev, entry->bar, addr, entry->is64);
         //outb('u', 0x734);

@@ -81,10 +81,12 @@ handle_post()
                                         pci_slot_get_irq = mch_pci_slot_get_irq            
                             pci_bios_check_devices()
                                 pci_bios_get_bar() 从设备处得到设备bar的size, prefetchable, is64等信息
+                                pci_region_create_entry()这段bar描述的信息创建一个pci_region_entry对象,挂到bus->r[type].list中
+
                                 
                             pci_bios_map_devices()
-                                pci_region_map_entries()  
-                                    pci_region_map_one_entry() 这里给cpu分配物理地址
+                                pci_region_map_entries()  遍历 busses[]->r[PCI_REGION_TYPE_MEM] ,busses[]->r[PCI_REGION_TYPE_PREFMEM]
+                                    pci_region_map_one_entry() 这里给pci设备分配cpu物理地址
                                         pci_set_io_region_addr() 调用pci_config_writel()将物理地址写入设备的设备pcie配置bar
                             pci_bios_init_devices()  这个函数很重要,循环调用pci_bios_init_device
                                 pci_bios_init_device(pci_device)
@@ -128,9 +130,12 @@ handle_post()
                     ps2port_setup()
                         acpi_dsdt_present_eisaid(0x0303)   确定ps2 controller是否存在
                         ps2_keyboard_setup()
-                            i8042_command(I8042_CMD_KBD_DISABLE)
-                            i8042_command(I8042_CMD_AUX_DISABLE)
-                            i8042_command(I8042_CMD_CTL_TEST)
+                            enable_hwirq(1, FUNC16(entry_09)); 键盘中断处理函数
+                            enable_hwirq(12, FUNC16(entry_74)); 鼠标中断处理函数
+                            i8042_command(I8042_CMD_KBD_DISABLE)  先禁用keyboard,
+                            i8042_command(I8042_CMD_AUX_DISABLE)  禁用 mouse
+                            i8042_flush()                           清空 ps2的 output buffer
+                            i8042_command(I8042_CMD_CTL_TEST)   test the PS/2 controller
                             i8042_command(I8042_CMD_KBD_TEST)
                             ps2_kbd_command(ATKBD_CMD_RESET_BAT)
                             ps2_kbd_command(ATKBD_CMD_RESET_DIS)
