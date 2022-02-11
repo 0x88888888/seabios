@@ -1023,7 +1023,7 @@ static void pci_region_migrate_64bit_entries(struct pci_region *from,
  *      qemu_platform_setup()
  *       pci_setup()
  *        pci_bios_check_devices()
- *         pci_region_create_entry()
+ *         pci_region_create_entry( align==size)
  * 
  * 给第bar个bar创建一段pci_region_entry信息
  */ 
@@ -1046,6 +1046,8 @@ pci_region_create_entry(struct pci_bus *bus, struct pci_device *dev,
     // Insert into list in sorted order.
     struct hlist_node **pprev;
     struct pci_region_entry *pos;
+
+    //遍历pci_bus->r[type]对应的pci_region_entry链表
     hlist_for_each_entry_pprev(pos, pprev, &bus->r[type].list, node) {
         if (pos->align < align || (pos->align == align && pos->size < size))
             break;
