@@ -110,6 +110,8 @@ pci_probe_devices(void)
         olly_printf("--------------------------------------------------- pci_probe_devices bus=0x%x\n", bus);
     }
     dprintf(1, "Found %d PCI devices (max PCI bus is %02x)\n", count, MaxPCIBus);
+
+    
 }
 
 // Search for a device with the specified vendor and device ids.

@@ -708,17 +708,22 @@ ahci_controller_setup(struct pci_device *pci)
     olly_printf("ahci_controller_setup 1\n");
     pci_enable_busmaster(pci);
     olly_printf("ahci_controller_setup 2\n");
-    val = ahci_ctrl_readl(ctrl, HOST_CTL);
+    val = ahci_ctrl_readl(ctrl, HOST_CTL /* 0x04 */);
+    
     olly_printf("ahci_controller_setup 3\n");
     ahci_ctrl_writel(ctrl, HOST_CTL, val | HOST_CTL_AHCI_EN);
+    
     olly_printf("ahci_controller_setup 4\n");
 
     ctrl->caps = ahci_ctrl_readl(ctrl, HOST_CAP);
+    
     ctrl->ports = ahci_ctrl_readl(ctrl, HOST_PORTS_IMPL);
     dprintf(2, "AHCI: cap 0x%x, ports_impl 0x%x\n",
             ctrl->caps, ctrl->ports);
-
+    
     max = 0x1f;
+
+    //分配 0x1f 个ahci port对象
     for (pnr = 0; pnr <= max; pnr++) {
         if (!(ctrl->ports & (1 << pnr)))
             continue;
@@ -727,6 +732,7 @@ ahci_controller_setup(struct pci_device *pci)
             continue;
         run_thread(ahci_port_detect, port);
     }
+    outl(ctrl->ports, 0x7315);
 }
 
 
@@ -748,14 +754,15 @@ ahci_scan(void)
     // Scan PCI bus for ATA adapters
     struct pci_device *pci;
     foreachpci(pci) {
-        olly_printf("pci->class=0x%x\n",pci->class);
+        olly_printf("pci->class=0x%x pci->bdf=0x%x \n",pci->class, pci->bdf);
         if (pci->class != PCI_CLASS_STORAGE_SATA)
             continue;
         if (pci->prog_if != 1 /* AHCI rev 1 */)
             continue;
-
+        
         ahci_controller_setup(pci);
     }
+    outb('a', 0x6234);
 }
 
 /*

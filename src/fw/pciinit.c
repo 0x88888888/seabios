@@ -479,13 +479,13 @@ void pci_resume(void)
  */ 
 static void pci_bios_init_device(struct pci_device *pci)
 {
-    dprintf(1, "PCI: init pci=%p id=%04x:%04x\n"
-            , pci, pci->vendor, pci->device);
+    dprintf(1, "\nPCI: init pci=%p id=%04x:%04x bdf=0x%x \n"
+            , pci, pci->vendor, pci->device, pci->bdf);
 
     /* map the interrupt */
     u16 bdf = pci->bdf;
     //设置中断号信息
-    int pin = pci_config_readb(bdf, PCI_INTERRUPT_PIN);
+    int pin = pci_config_readb(bdf, PCI_INTERRUPT_PIN); /* 0x3d */
     if (pin != 0)
         pci_config_writeb(bdf, PCI_INTERRUPT_LINE /* 3c */, pci_slot_get_irq(pci, pin));
 
@@ -497,13 +497,13 @@ static void pci_bios_init_device(struct pci_device *pci)
     /*
      * 启用pci config中的bar映射的地址
      */
-    pci_config_maskw(bdf, PCI_COMMAND, 0,
+    pci_config_maskw(bdf, PCI_COMMAND /* 0x04 */, 0,
                      PCI_COMMAND_IO | PCI_COMMAND_MEMORY | PCI_COMMAND_SERR);
 
     
     /* enable SERR# for forwarding */
     if (pci->header_type & PCI_HEADER_TYPE_BRIDGE)//bridge设备
-        pci_config_maskw(bdf, PCI_BRIDGE_CONTROL, 0,
+        pci_config_maskw(bdf, PCI_BRIDGE_CONTROL /* 0x3e */, 0,
                          PCI_BRIDGE_CTL_SERR);
 }
 

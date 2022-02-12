@@ -186,7 +186,7 @@ pci_next(int bdf, int bus)
     //olly_printf("%s","0 --####--pci_next --###-- \n");
     //0号function,并且是multi function设备
     if (pci_bdf_to_fn(bdf) == 0
-        && (pci_config_readb(bdf, PCI_HEADER_TYPE) & 0x80) == 0)  //最高bit为1 ,multi funciton
+        && (pci_config_readb(bdf, PCI_HEADER_TYPE) & 0x80) == 0)  //最高bit为0 ,不是multi funciton
         // Last found device wasn't a multi-function device - skip to
         // the next device.
         bdf += 8; 
@@ -198,12 +198,14 @@ pci_next(int bdf, int bus)
         if (pci_bdf_to_bus(bdf) != bus)
             return -1; //bdf得到的bus号不在当前讨论范围
 
-        olly_printf("1 --####--pci_next --###-- bdf=0x%x bus=0x%x \n", bdf, bus);
+        olly_printf("1 --####--pci_next --###-- bus=0x%x bdf=0x%x  \n", bus, bdf );
         u16 v = pci_config_readw(bdf, PCI_VENDOR_ID);
-        olly_printf("PCI_VENDOR_ID = 0x%x\n", v);
-        if (v != 0x0000 && v != 0xffff)
+        //olly_printf("PCI_VENDOR_ID = 0x%x\n", v);
+        if (v != 0x0000 && v != 0xffff){
             // Device is present.
             return bdf;
+        }
+
 
         if (pci_bdf_to_fn(bdf) == 0)//是0号fn，并且这个fn返回的PCI_VENDOR_ID ==0,说明这个dev号下面没有fn了, 就跳到下一个去了
             bdf += 8;
